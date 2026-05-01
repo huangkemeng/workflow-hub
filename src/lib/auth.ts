@@ -1,5 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { compare } from 'bcryptjs';
+import { prisma } from './prisma';
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -7,6 +9,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/login',
+    error: '/login',
   },
   providers: [
     CredentialsProvider({
@@ -16,15 +19,40 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // Mock authentication - replace with actual API call
-        if (credentials?.email === 'user@example.com' && credentials?.password === 'password') {
-          return {
-            id: '1',
-            email: 'user@example.com',
-            name: 'Test User',
-          };
+        if (!credentials?.email || !credentials?.password) {
+          return null;
         }
-        return null;
+
+        try {
+          // 从数据库查找用户
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          });
+
+          if (!user || !user.password) {
+            return null;
+          }
+
+          // 验证密码
+          const isPasswordValid = await compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            avatar: user.avatar,
+          };
+        } catch (error) {
+          console.error('认证失败:', error);
+          return null;
+        }
       },
     }),
   ],
@@ -34,14 +62,23 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.name = token.name;
         session.user.email = token.email as string;
+        session.user.avatar = token.avatar as string | null;
       }
       return session;
     },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+        token.avatar = user.avatar;
       }
       return token;
+    },
+  },
+  events: {
+    async signOut({ token }) {
+      console.log('用户登出:', token.email);
     },
   },
 };

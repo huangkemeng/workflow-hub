@@ -6,6 +6,7 @@ import { useShareStats } from '@/hooks/use-share-stats';
 import { useBatchOperations } from '@/hooks/use-batch-operations';
 import { useToastContext } from '@/providers/toast-provider';
 import { useConfirm } from '@/hooks/use-confirm';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { WorkflowList } from '@/components/workflow/workflow-list';
@@ -27,6 +28,8 @@ import { Plus, Search, BarChart3, Workflow } from 'lucide-react';
 import Link from 'next/link';
 
 export default function WorkflowsPage() {
+  // 认证检查 - 未登录会自动跳转到登录页
+  const { isLoading: authLoading } = useRequireAuth();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [sort, setSort] = useState('updated-desc');
