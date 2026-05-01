@@ -125,6 +125,34 @@ export const api = {
     return fetchApi(`/api/share/${token}`);
   },
 
+  // 发布工作流
+  async publishWorkflow(workflowId: string): Promise<void> {
+    await fetchApi(`/api/workflows/${workflowId}/publish`, {
+      method: 'POST',
+    });
+  },
+
+  // 取消发布工作流
+  async unpublishWorkflow(workflowId: string): Promise<void> {
+    await fetchApi(`/api/workflows/${workflowId}/unpublish`, {
+      method: 'POST',
+    });
+  },
+
+  // 归档工作流
+  async archiveWorkflow(workflowId: string): Promise<void> {
+    await fetchApi(`/api/workflows/${workflowId}/archive`, {
+      method: 'POST',
+    });
+  },
+
+  // 恢复工作流
+  async restoreWorkflow(workflowId: string): Promise<void> {
+    await fetchApi(`/api/workflows/${workflowId}/restore`, {
+      method: 'POST',
+    });
+  },
+
   // 通用 HTTP 方法（向后兼容）
   async get(url: string): Promise<{ data: any }> {
     const data = await fetchApi<any>(url);

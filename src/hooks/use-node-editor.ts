@@ -10,13 +10,22 @@ interface UseNodeEditorProps {
 }
 
 export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProps = {}) {
-  const [nodes, setNodes] = useState<WorkflowNode[]>(sortNodesByPosition(initialNodes));
+  const [nodes, setNodesState] = useState<WorkflowNode[]>(sortNodesByPosition(initialNodes));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  // 包装 setNodes 以触发 onChange
+  const setNodes = useCallback((newNodes: WorkflowNode[] | ((prev: WorkflowNode[]) => WorkflowNode[])) => {
+    const updatedNodes = typeof newNodes === 'function' 
+      ? newNodes(nodes) 
+      : newNodes;
+    setNodesState(updatedNodes);
+    onChange?.(updatedNodes);
+  }, [nodes, onChange]);
 
   const addNode = useCallback((type: NodeType) => {
     const newNode = createNode(type, nodes.length + 1);
     const updatedNodes = [...nodes, newNode];
-    setNodes(updatedNodes);
+    setNodesState(updatedNodes);
     setSelectedNodeId(newNode.id);
     onChange?.(updatedNodes);
     return newNode;
@@ -26,7 +35,7 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
     const updatedNodes = nodes.map((node) =>
       node.id === nodeId ? { ...node, ...updates } as WorkflowNode : node
     );
-    setNodes(updatedNodes);
+    setNodesState(updatedNodes);
     onChange?.(updatedNodes);
   }, [nodes, onChange]);
 
@@ -37,7 +46,7 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
       ...node,
       position: index + 1,
     }));
-    setNodes(reorderedNodes);
+    setNodesState(reorderedNodes);
     if (selectedNodeId === nodeId) {
       setSelectedNodeId(null);
     }
@@ -46,7 +55,7 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
 
   const moveNode = useCallback((fromIndex: number, toIndex: number) => {
     const updatedNodes = reorderNodes(nodes, fromIndex, toIndex);
-    setNodes(updatedNodes);
+    setNodesState(updatedNodes);
     onChange?.(updatedNodes);
   }, [nodes, onChange]);
 
@@ -67,5 +76,6 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
     moveNode,
     selectNode,
     getSelectedNode,
+    setNodes,
   };
 }

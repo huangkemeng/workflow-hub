@@ -60,26 +60,26 @@ export function useWorkflow(id: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchWorkflow = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await api.getWorkflow(id);
-        setWorkflow(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '获取工作流详情失败');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (id) {
-      fetchWorkflow();
+  const fetchWorkflow = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await api.getWorkflow(id);
+      setWorkflow(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '获取工作流详情失败');
+    } finally {
+      setIsLoading(false);
     }
   }, [id]);
 
-  return { workflow, isLoading, error };
+  useEffect(() => {
+    if (id) {
+      fetchWorkflow();
+    }
+  }, [id, fetchWorkflow]);
+
+  return { workflow, isLoading, error, refetch: fetchWorkflow };
 }
 
 export function useCreateWorkflow() {
