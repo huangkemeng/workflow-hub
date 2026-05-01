@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useWorkflow } from '@/hooks/use-workflows';
 import { useNodeEditor } from '@/hooks/use-node-editor';
 import { useConnections } from '@/hooks/use-connections';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { WorkflowCanvas } from '@/components/canvas/workflow-canvas';
@@ -21,6 +22,8 @@ import { switchNodeType } from '@/lib/node-utils';
 import { removeNodeConnections } from '@/lib/connection-utils';
 
 export default function EditWorkflowPage() {
+  // 认证检查
+  const { isLoading: authLoading } = useRequireAuth();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;

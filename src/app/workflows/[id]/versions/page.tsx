@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useVersions, useWorkflow } from '@/hooks/use-workflows';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ import {
 } from '@/components/ui/dialog';
 
 export default function VersionsPage() {
+  // 认证检查
+  const { isLoading: authLoading } = useRequireAuth();
   const params = useParams();
   const id = params.id as string;
   const { workflow, isLoading: isLoadingWorkflow } = useWorkflow(id);

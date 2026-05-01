@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useWorkflow } from '@/hooks/use-workflows';
 import { useShare } from '@/hooks/use-share';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { ShareModal } from '@/components/share/share-modal';
@@ -15,6 +16,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Plus, Share2, Link as LinkIcon } from 'lucide-react';
 
 export default function ShareManagementPage() {
+  // 认证检查
+  const { isLoading: authLoading } = useRequireAuth();
   const params = useParams();
   const id = params.id as string;
   const { workflow, isLoading: isWorkflowLoading } = useWorkflow(id);

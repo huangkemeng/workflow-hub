@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCreateWorkflow } from '@/hooks/use-workflows';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function NewWorkflowPage() {
+  // 认证检查
+  const { isLoading: authLoading } = useRequireAuth();
   const router = useRouter();
   const { create, isLoading } = useCreateWorkflow();
   const [title, setTitle] = useState('');

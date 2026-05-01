@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useWorkflow } from '@/hooks/use-workflows';
 import { useWorkflowStatus } from '@/hooks/use-workflow-status';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,8 @@ import {
 import { toast } from 'sonner';
 
 export default function WorkflowDetailPage() {
+  // 认证检查
+  const { isLoading: authLoading } = useRequireAuth();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
