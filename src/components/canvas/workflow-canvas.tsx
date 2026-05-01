@@ -66,14 +66,20 @@ export function WorkflowCanvas({
 }: WorkflowCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef(nodes);
+  const connectionsRef = useRef(connections);
+  const isCreatingRef = useRef(isCreatingConnection);
+  const tempConnectionRef = useRef(tempConnection);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [typeSelectorPosition, setTypeSelectorPosition] = useState({ x: 0, y: 0 });
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
 
-  // 保持 nodes 引用最新
+  // 保持引用最新
   useEffect(() => {
     nodesRef.current = nodes;
-  }, [nodes]);
+    connectionsRef.current = connections;
+    isCreatingRef.current = isCreatingConnection;
+    tempConnectionRef.current = tempConnection;
+  }, [nodes, connections, isCreatingConnection, tempConnection]);
 
   // 配置拖拽传感器 - 使用 MouseSensor 和 TouchSensor 替代 PointerSensor
   // 确保点击事件能正常传播到节点
@@ -114,20 +120,25 @@ export function WorkflowCanvas({
     }
   }, [onReorderNodes]);
 
-  // 处理节点连接按钮点击
+  // 处理节点连接按钮点击 - 使用 ref 获取最新状态避免闭包问题
   const handleConnectClick = useCallback((nodeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (isCreatingConnection && tempConnection?.source === nodeId) {
+    const currentIsCreating = isCreatingRef.current;
+    const currentTempConnection = tempConnectionRef.current;
+    const currentConnections = connectionsRef.current;
+    const currentNodes = nodesRef.current;
+
+    if (currentIsCreating && currentTempConnection?.source === nodeId) {
       // 取消连接
       onCancelConnection();
-    } else if (isCreatingConnection && tempConnection) {
+    } else if (currentIsCreating && currentTempConnection) {
       // 完成连接
       const validation = validateConnection(
-        tempConnection.source,
+        currentTempConnection.source,
         nodeId,
-        connections,
-        nodes
+        currentConnections,
+        currentNodes
       );
 
       if (validation.valid) {
@@ -139,7 +150,7 @@ export function WorkflowCanvas({
       // 开始连接
       onStartConnection(nodeId);
     }
-  }, [isCreatingConnection, tempConnection, connections, nodes, onStartConnection, onCancelConnection]);
+  }, [onStartConnection, onCancelConnection]);
 
   // 处理连接类型选择
   const handleTypeSelect = useCallback((type: 'sequential' | 'conditional' | 'loop' | 'parallel' | 'subflow') => {
