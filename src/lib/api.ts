@@ -110,7 +110,8 @@ export const api = {
 
   // 获取分享链接列表
   async getShares(workflowId: string): Promise<any[]> {
-    return fetchApi<any[]>(`/api/workflows/${workflowId}/share`);
+    const response = await fetchApi<{ shares: any[] }>(`/api/workflows/${workflowId}/share`);
+    return response.shares || [];
   },
 
   // 撤销分享
