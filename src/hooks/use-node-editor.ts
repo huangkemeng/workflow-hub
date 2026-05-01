@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { WorkflowNode, NodeType } from '@/types/node';
 import { createNode, reorderNodes, sortNodesByPosition } from '@/lib/node-utils';
 
@@ -15,9 +15,16 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
   
   // 使用 ref 来保持最新的 nodes 状态
   const nodesRef = useRef(nodes);
-  useEffect(() => {
-    nodesRef.current = nodes;
-  }, [nodes]);
+  nodesRef.current = nodes;
+
+  // 使用 ref 来保持 onChange 引用，避免依赖问题
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // 触发 onChange 的辅助函数
+  const triggerOnChange = useCallback((updatedNodes: WorkflowNode[]) => {
+    onChangeRef.current?.(updatedNodes);
+  }, []);
 
   // 包装 setNodes 以触发 onChange
   const setNodes = useCallback((newNodes: WorkflowNode[] | ((prev: WorkflowNode[]) => WorkflowNode[])) => {
@@ -25,8 +32,8 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
       ? newNodes(nodesRef.current) 
       : newNodes;
     setNodesState(updatedNodes);
-    onChange?.(updatedNodes);
-  }, [onChange]);
+    triggerOnChange(updatedNodes);
+  }, [triggerOnChange]);
 
   const addNode = useCallback((type: NodeType) => {
     const currentNodes = nodesRef.current;
@@ -34,9 +41,9 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
     const updatedNodes = [...currentNodes, newNode];
     setNodesState(updatedNodes);
     setSelectedNodeId(newNode.id);
-    onChange?.(updatedNodes);
+    triggerOnChange(updatedNodes);
     return newNode;
-  }, [onChange]);
+  }, [triggerOnChange]);
 
   const updateNode = useCallback((nodeId: string, updates: Partial<WorkflowNode>) => {
     const currentNodes = nodesRef.current;
@@ -44,8 +51,8 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
       node.id === nodeId ? { ...node, ...updates } as WorkflowNode : node
     );
     setNodesState(updatedNodes);
-    onChange?.(updatedNodes);
-  }, [onChange]);
+    triggerOnChange(updatedNodes);
+  }, [triggerOnChange]);
 
   const deleteNode = useCallback((nodeId: string) => {
     const currentNodes = nodesRef.current;
@@ -59,15 +66,15 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
     if (selectedNodeId === nodeId) {
       setSelectedNodeId(null);
     }
-    onChange?.(reorderedNodes);
-  }, [selectedNodeId, onChange]);
+    triggerOnChange(reorderedNodes);
+  }, [selectedNodeId, triggerOnChange]);
 
   const moveNode = useCallback((fromIndex: number, toIndex: number) => {
     const currentNodes = nodesRef.current;
     const updatedNodes = reorderNodes(currentNodes, fromIndex, toIndex);
     setNodesState(updatedNodes);
-    onChange?.(updatedNodes);
-  }, [onChange]);
+    triggerOnChange(updatedNodes);
+  }, [triggerOnChange]);
 
   const selectNode = useCallback((nodeId: string | null) => {
     setSelectedNodeId(nodeId);

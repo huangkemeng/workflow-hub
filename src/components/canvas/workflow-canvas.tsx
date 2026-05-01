@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -64,15 +64,21 @@ export function WorkflowCanvas({
   onReorderNodes,
 }: WorkflowCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const nodesRef = useRef(nodes);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [typeSelectorPosition, setTypeSelectorPosition] = useState({ x: 0, y: 0 });
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
 
-  // 配置拖拽传感器
+  // 保持 nodes 引用最新
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  // 配置拖拽传感器 - 增加触发距离，避免误触发
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // 需要移动 8px 才开始拖拽
+        distance: 10, // 需要移动 10px 才开始拖拽
       },
     }),
     useSensor(KeyboardSensor, {
@@ -85,17 +91,20 @@ export function WorkflowCanvas({
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = nodes.findIndex((n) => n.id === active.id);
-      const newIndex = nodes.findIndex((n) => n.id === over.id);
+      const currentNodes = nodesRef.current;
+      const oldIndex = currentNodes.findIndex((n) => n.id === active.id);
+      const newIndex = currentNodes.findIndex((n) => n.id === over.id);
 
-      const reorderedNodes = arrayMove(nodes, oldIndex, newIndex).map((node, index) => ({
-        ...node,
-        position: index + 1,
-      }));
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedNodes = arrayMove(currentNodes, oldIndex, newIndex).map((node, index) => ({
+          ...node,
+          position: index + 1,
+        }));
 
-      onReorderNodes(reorderedNodes);
+        onReorderNodes(reorderedNodes);
+      }
     }
-  }, [nodes, onReorderNodes]);
+  }, [onReorderNodes]);
 
   // 处理节点连接按钮点击
   const handleConnectClick = useCallback((nodeId: string, e: React.MouseEvent) => {
@@ -298,7 +307,10 @@ export function WorkflowCanvas({
       {showTypeSelector && (
         <div
           className="fixed z-50"
-          style={{ left: typeSelectorPosition.x, top: typeSelectorPosition.y }}
+          style={{
+            left: typeSelectorPosition.x,
+            top: typeSelectorPosition.y,
+          }}
         >
           <ConnectionTypeSelector
             onSelect={handleTypeSelect}
@@ -307,13 +319,6 @@ export function WorkflowCanvas({
               setPendingTarget(null);
             }}
           />
-        </div>
-      )}
-
-      {/* 连接模式提示 */}
-      {isCreatingConnection && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg z-50">
-          选择目标节点完成连接，或点击空白处取消
         </div>
       )}
     </div>
