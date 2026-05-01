@@ -8,7 +8,7 @@ import { GitBranch, ExternalLink, FolderTree, ArrowRightLeft, ArrowLeftRight } f
 interface SubflowNodeViewProps {
   node: SubflowNode;
   isSelected?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 export function SubflowNodeView({ node, isSelected, onClick }: SubflowNodeViewProps) {

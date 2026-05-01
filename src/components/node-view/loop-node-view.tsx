@@ -8,7 +8,7 @@ import { RefreshCw, RotateCcw, History, CheckCircle2, XCircle, HelpCircle } from
 interface LoopNodeViewProps {
   node: LoopNode;
   isSelected?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 export function LoopNodeView({ node, isSelected, onClick }: LoopNodeViewProps) {

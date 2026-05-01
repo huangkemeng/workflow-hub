@@ -9,7 +9,7 @@ import { formatDateTime } from '@/lib/utils';
 interface StandardNodeViewProps {
   node: StandardNode;
   isSelected?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 const statusMap = {

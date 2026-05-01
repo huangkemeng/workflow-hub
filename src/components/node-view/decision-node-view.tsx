@@ -8,7 +8,7 @@ import { GitBranch, ArrowRight } from 'lucide-react';
 interface DecisionNodeViewProps {
   node: DecisionNode;
   isSelected?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 export function DecisionNodeView({ node, isSelected, onClick }: DecisionNodeViewProps) {

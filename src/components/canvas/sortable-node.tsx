@@ -31,6 +31,7 @@ export function SortableNode({ id, children, isSelected, isDisabled }: SortableN
 
   return (
     <div
+      ref={setNodeRef}
       style={style}
       className={cn(
         'relative group',
@@ -40,7 +41,6 @@ export function SortableNode({ id, children, isSelected, isDisabled }: SortableN
     >
       {/* 拖拽手柄 - 只有手柄可以触发拖拽 */}
       <div
-        ref={setNodeRef}
         {...attributes}
         {...listeners}
         className={cn(
@@ -54,7 +54,7 @@ export function SortableNode({ id, children, isSelected, isDisabled }: SortableN
         </div>
       </div>
 
-      {/* 节点内容 - 点击事件正常传播，不参与拖拽 */}
+      {/* 节点内容 - 点击事件正常传播 */}
       <div className="relative">
         {children}
       </div>

@@ -7,7 +7,7 @@ import { StickyNote, Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from
 interface NoteNodeViewProps {
   node: NoteNode;
   isSelected?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 const noteTypeConfig = {

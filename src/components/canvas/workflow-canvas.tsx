@@ -159,7 +159,8 @@ export function WorkflowCanvas({
 
     const commonProps = {
       isSelected,
-      onClick: () => {
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation(); // 阻止事件冒泡到画布
         onSelectNode(node.id);
         onSelectConnection(null);
       },

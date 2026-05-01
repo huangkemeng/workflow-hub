@@ -8,7 +8,7 @@ import { Layers, CheckCircle2, Clock, User, Link2 } from 'lucide-react';
 interface ParallelNodeViewProps {
   node: ParallelNode;
   isSelected?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 const statusMap = {
