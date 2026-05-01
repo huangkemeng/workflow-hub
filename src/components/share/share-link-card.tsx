@@ -60,7 +60,7 @@ export function ShareLinkCard({ shareLink, onRevoke, baseUrl }: ShareLinkCardPro
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <Eye className="h-4 w-4" />
-            <span>访问 {shareLink.accessCount} 次</span>
+            <span>访问 {shareLink.viewCount} 次</span>
           </div>
           <div>
             {shareLink.expiresAt ? (

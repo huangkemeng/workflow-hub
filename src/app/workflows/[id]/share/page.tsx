@@ -116,7 +116,7 @@ export default function ShareManagementPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {shareLinks.reduce((sum, link) => sum + link.accessCount, 0)}
+                  {shareLinks.reduce((sum, link) => sum + link.viewCount, 0)}
                 </div>
               </CardContent>
             </Card>

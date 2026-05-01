@@ -4,7 +4,7 @@ export interface ShareLink {
   token: string;
   expiresAt: string | null;
   allowExport: boolean;
-  accessCount: number;
+  viewCount: number;
   createdAt: string;
   updatedAt: string;
 }

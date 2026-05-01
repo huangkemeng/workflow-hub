@@ -75,7 +75,7 @@ export default function SharePage() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Eye className="h-4 w-4" />
-                <span>{workflow.share?.accessCount || 0} 次访问</span>
+                <span>{workflow.share?.viewCount || 0} 次访问</span>
               </div>
               {workflow.share?.allowExport && (
                 <Button
