@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Connection, ConnectionType, CreateConnectionRequest } from '@/types/connection';
 import { WorkflowNode } from '@/types/node';
 import {
@@ -30,14 +30,22 @@ export function useConnections({
     target: string | null;
   } | null>(null);
 
+  // 使用 ref 来保持最新状态
+  const connectionsRef = useRef(connections);
+  connectionsRef.current = connections;
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   // 包装 setConnections 以触发 onChange
   const setConnections = useCallback((newConnections: Connection[] | ((prev: Connection[]) => Connection[])) => {
     const updatedConnections = typeof newConnections === 'function'
-      ? newConnections(connections)
+      ? newConnections(connectionsRef.current)
       : newConnections;
     setConnectionsState(updatedConnections);
-    onChange?.(updatedConnections);
-  }, [connections, onChange]);
+    onChangeRef.current?.(updatedConnections);
+  }, []); // 空依赖数组
 
   // 开始创建连接
   const startConnection = useCallback((sourceNodeId: string) => {
@@ -47,21 +55,23 @@ export function useConnections({
 
   // 更新临时连接目标
   const updateTempTarget = useCallback((targetNodeId: string | null) => {
-    if (tempConnection) {
-      setTempConnection({ ...tempConnection, target: targetNodeId });
-    }
-  }, [tempConnection]);
+    setTempConnection((prev) => prev ? { ...prev, target: targetNodeId } : null);
+  }, []);
 
   // 完成创建连接
   const completeConnection = useCallback(
     (type: ConnectionType = 'sequential', options?: { label?: string; condition?: string; color?: string }) => {
-      if (!tempConnection?.target) return null;
+      const currentTemp = tempConnection;
+      const currentConnections = connectionsRef.current;
+      const currentNodes = nodesRef.current;
+
+      if (!currentTemp?.target) return null;
 
       const validation = validateConnection(
-        tempConnection.source,
-        tempConnection.target,
-        connections,
-        nodes
+        currentTemp.source,
+        currentTemp.target,
+        currentConnections,
+        currentNodes
       );
 
       if (!validation.valid) {
@@ -71,21 +81,21 @@ export function useConnections({
       }
 
       const newConnection = createConnection(
-        tempConnection.source,
-        tempConnection.target,
+        currentTemp.source,
+        currentTemp.target,
         type,
         options
       );
 
-      const updatedConnections = [...connections, newConnection];
+      const updatedConnections = [...currentConnections, newConnection];
       setConnectionsState(updatedConnections);
       setIsCreating(false);
       setTempConnection(null);
-      onChange?.(updatedConnections);
+      onChangeRef.current?.(updatedConnections);
 
       return newConnection;
     },
-    [tempConnection, connections, nodes, onChange]
+    [tempConnection] // 只依赖 tempConnection
   );
 
   // 取消创建连接
@@ -97,24 +107,24 @@ export function useConnections({
   // 删除连接
   const deleteConnection = useCallback(
     (connectionId: string) => {
-      const updatedConnections = deleteConn(connectionId, connections);
+      const currentConnections = connectionsRef.current;
+      const updatedConnections = deleteConn(connectionId, currentConnections);
       setConnectionsState(updatedConnections);
-      if (selectedConnectionId === connectionId) {
-        setSelectedConnectionId(null);
-      }
-      onChange?.(updatedConnections);
+      setSelectedConnectionId((prev) => prev === connectionId ? null : prev);
+      onChangeRef.current?.(updatedConnections);
     },
-    [connections, selectedConnectionId, onChange]
+    [] // 空依赖数组
   );
 
   // 更新连接
   const updateConnection = useCallback(
     (connectionId: string, updates: Partial<Connection>) => {
-      const updatedConnections = updateConn(connectionId, updates, connections);
+      const currentConnections = connectionsRef.current;
+      const updatedConnections = updateConn(connectionId, updates, currentConnections);
       setConnectionsState(updatedConnections);
-      onChange?.(updatedConnections);
+      onChangeRef.current?.(updatedConnections);
     },
-    [connections, onChange]
+    [] // 空依赖数组
   );
 
   // 选择连接
@@ -124,23 +134,23 @@ export function useConnections({
 
   // 获取选中连接
   const getSelectedConnection = useCallback(() => {
-    return connections.find((c) => c.id === selectedConnectionId) || null;
-  }, [connections, selectedConnectionId]);
+    return connectionsRef.current.find((c) => c.id === selectedConnectionId) || null;
+  }, [selectedConnectionId]); // 只依赖 selectedConnectionId
 
   // 获取节点的连接信息
   const getConnectionsForNode = useCallback(
     (nodeId: string) => {
-      return getNodeConnections(nodeId, connections);
+      return getNodeConnections(nodeId, connectionsRef.current);
     },
-    [connections]
+    [] // 空依赖数组
   );
 
   // 验证连接
   const validateNewConnection = useCallback(
     (sourceId: string, targetId: string) => {
-      return validateConnection(sourceId, targetId, connections, nodes);
+      return validateConnection(sourceId, targetId, connectionsRef.current, nodesRef.current);
     },
-    [connections, nodes]
+    [] // 空依赖数组
   );
 
   return {
@@ -150,7 +160,6 @@ export function useConnections({
     tempConnection,
     setConnections,
     startConnection,
-    updateTempTarget,
     completeConnection,
     cancelConnection,
     deleteConnection,
