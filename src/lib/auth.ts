@@ -1,11 +1,7 @@
-import { NextAuthOptions } from 'next-auth'
-import { PrismaAdapter } from '@auth/prisma-adapter'
-import CredentialsProvider from 'next-auth/providers/credentials'
-import bcrypt from 'bcryptjs'
-import { prisma } from './prisma'
+import { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
   session: {
     strategy: 'jwt',
   },
@@ -20,75 +16,32 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
+        // Mock authentication - replace with actual API call
+        if (credentials?.email === 'user@example.com' && credentials?.password === 'password') {
+          return {
+            id: '1',
+            email: 'user@example.com',
+            name: 'Test User',
+          };
         }
-
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-        })
-
-        if (!user || !user.password) {
-          return null
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
-
-        if (!isPasswordValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.avatar,
-        }
+        return null;
       },
     }),
   ],
   callbacks: {
     async session({ token, session }) {
       if (token) {
-        session.user.id = token.id as string
-        session.user.name = token.name
-        session.user.email = token.email as string
-        session.user.image = token.picture
+        session.user.id = token.id as string;
+        session.user.name = token.name;
+        session.user.email = token.email as string;
       }
-      return session
+      return session;
     },
     async jwt({ token, user }) {
-      if (!token.email) {
-        if (user) {
-          token.id = user?.id
-        }
-        return token
+      if (user) {
+        token.id = user.id;
       }
-
-      const dbUser = await prisma.user.findUnique({
-        where: {
-          email: token.email,
-        },
-      })
-
-      if (!dbUser) {
-        if (user) {
-          token.id = user?.id
-        }
-        return token
-      }
-
-      return {
-        id: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        picture: dbUser.avatar,
-      }
+      return token;
     },
   },
-}
+};
