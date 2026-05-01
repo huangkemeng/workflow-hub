@@ -16,10 +16,18 @@ export async function POST(
 
     const workflowId = params.id;
 
+    // 获取当前用户
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     // 获取工作流
     const workflow = await prisma.workflow.findUnique({
       where: { id: workflowId },
-      include: { owner: true },
     });
 
     if (!workflow) {
@@ -27,7 +35,7 @@ export async function POST(
     }
 
     // 检查权限
-    if (workflow.owner.email !== session.user.email) {
+    if (workflow.userId !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -41,7 +49,6 @@ export async function POST(
       where: { id: workflowId },
       data: {
         status: 'DRAFT',
-        publishedAt: null,
       },
     });
 

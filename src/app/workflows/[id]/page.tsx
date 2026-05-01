@@ -1,9 +1,10 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useWorkflow } from '@/hooks/use-workflows';
+import { useWorkflowStatus } from '@/hooks/use-workflow-status';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime } from '@/lib/utils';
 import { ExportModal } from '@/components/export/export-modal';
+import { WorkflowStatusBadge } from '@/components/workflow/workflow-status-badge';
+import { WorkflowStatusActions, WorkflowStatusHelp } from '@/components/workflow/workflow-status-actions';
 import {
   ArrowLeft,
   Edit,
@@ -22,18 +25,69 @@ import {
   Clock,
   Calendar,
 } from 'lucide-react';
-
-const statusMap = {
-  DRAFT: { label: '草稿', variant: 'secondary' as const },
-  PUBLISHED: { label: '已发布', variant: 'default' as const },
-  ARCHIVED: { label: '已归档', variant: 'outline' as const },
-};
+import { toast } from 'sonner';
 
 export default function WorkflowDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
-  const { workflow, isLoading, error } = useWorkflow(id);
+  const { workflow, isLoading, error, refetch } = useWorkflow(id);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  const {
+    status,
+    isLoading: isStatusLoading,
+    publish,
+    unpublish,
+    archive,
+    restore,
+  } = useWorkflowStatus({
+    workflowId: id,
+    initialStatus: workflow?.status || 'DRAFT',
+    onStatusChange: () => {
+      refetch();
+    },
+  });
+
+  const handlePublish = async () => {
+    try {
+      await publish();
+      toast.success('工作流已发布');
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '发布失败');
+    }
+  };
+
+  const handleUnpublish = async () => {
+    try {
+      await unpublish();
+      toast.success('工作流已取消发布');
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '取消发布失败');
+    }
+  };
+
+  const handleArchive = async () => {
+    try {
+      await archive();
+      toast.success('工作流已归档');
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '归档失败');
+    }
+  };
+
+  const handleRestore = async () => {
+    try {
+      await restore();
+      toast.success('工作流已恢复');
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '恢复失败');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -76,7 +130,9 @@ export default function WorkflowDetailPage() {
     );
   }
 
-  const status = statusMap[workflow.status];
+  // 归档状态下隐藏编辑按钮
+  const canEdit = workflow.status !== 'ARCHIVED';
+  const isPublished = workflow.status === 'PUBLISHED';
 
   return (
     <div className="min-h-screen">
@@ -98,33 +154,45 @@ export default function WorkflowDetailPage() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold">{workflow.title}</h1>
-                <Badge variant={status.variant}>{status.label}</Badge>
+                <WorkflowStatusBadge status={workflow.status} />
               </div>
               <p className="text-muted-foreground">
                 {workflow.description || '暂无描述'}
               </p>
+              <WorkflowStatusHelp status={workflow.status} />
             </div>
-            <div className="flex gap-2">
-              <Link href={`/workflows/${id}/edit`}>
-                <Button variant="outline">
-                  <Edit className="mr-2 h-4 w-4" />
-                  编辑
-                </Button>
-              </Link>
+            <div className="flex items-center gap-2">
+              <WorkflowStatusActions
+                status={workflow.status}
+                onPublish={handlePublish}
+                onUnpublish={handleUnpublish}
+                onArchive={handleArchive}
+                onRestore={handleRestore}
+                isLoading={isStatusLoading}
+              />
+              <div className="w-px h-6 bg-border mx-2" />
+              {canEdit && (
+                <Link href={`/workflows/${id}/edit`}>
+                  <Button variant="outline" size="sm">
+                    <Edit className="mr-2 h-4 w-4" />
+                    编辑
+                  </Button>
+                </Link>
+              )}
               <Link href={`/workflows/${id}/share`}>
-                <Button variant="outline">
+                <Button variant="outline" size="sm">
                   <Share2 className="mr-2 h-4 w-4" />
                   分享
                 </Button>
               </Link>
-              <Button variant="outline" onClick={() => setIsExportModalOpen(true)}>
+              <Button variant="outline" size="sm" onClick={() => setIsExportModalOpen(true)}>
                 <Download className="mr-2 h-4 w-4" />
                 导出
               </Button>
               <Link href={`/workflows/${id}/versions`}>
-                <Button variant="outline">
+                <Button variant="outline" size="sm">
                   <History className="mr-2 h-4 w-4" />
-                  版本历史
+                  版本
                 </Button>
               </Link>
             </div>

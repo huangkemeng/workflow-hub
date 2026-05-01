@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// POST /api/workflows/[id]/publish - 发布工作流
+// POST /api/workflows/[id]/restore - 恢复归档的工作流
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -40,30 +40,26 @@ export async function POST(
     }
 
     // 检查当前状态
-    if (workflow.status === 'PUBLISHED') {
-      return NextResponse.json({ error: 'Workflow is already published' }, { status: 400 });
+    if (workflow.status !== 'ARCHIVED') {
+      return NextResponse.json({ error: 'Workflow is not archived' }, { status: 400 });
     }
 
-    if (workflow.status === 'ARCHIVED') {
-      return NextResponse.json({ error: 'Cannot publish archived workflow' }, { status: 400 });
-    }
-
-    // 发布工作流
+    // 恢复工作流
     const updatedWorkflow = await prisma.workflow.update({
       where: { id: workflowId },
       data: {
-        status: 'PUBLISHED',
+        status: 'DRAFT',
       },
     });
 
     return NextResponse.json({
-      message: 'Workflow published successfully',
+      message: 'Workflow restored successfully',
       workflow: updatedWorkflow,
     });
   } catch (error) {
-    console.error('Failed to publish workflow:', error);
+    console.error('Failed to restore workflow:', error);
     return NextResponse.json(
-      { error: 'Failed to publish workflow' },
+      { error: 'Failed to restore workflow' },
       { status: 500 }
     );
   }

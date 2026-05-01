@@ -1,10 +1,12 @@
 import { WorkflowNode } from './node';
 
+export type WorkflowStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
 export interface Workflow {
   id: string;
   title: string;
   description?: string;
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  status: WorkflowStatus;
   userId: string;
   nodes: WorkflowNode[];
   currentVersion: number;
@@ -43,7 +45,7 @@ export interface WorkflowListItem {
   id: string;
   title: string;
   description?: string;
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  status: WorkflowStatus;
   nodeCount: number;
   updatedAt: string;
 }
