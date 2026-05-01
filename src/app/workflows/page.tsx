@@ -4,11 +4,16 @@ import { useState } from 'react';
 import { useWorkflows } from '@/hooks/use-workflows';
 import { useShareStats } from '@/hooks/use-share-stats';
 import { useBatchOperations } from '@/hooks/use-batch-operations';
+import { useToastContext } from '@/providers/toast-provider';
+import { useConfirm } from '@/hooks/use-confirm';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { WorkflowList } from '@/components/workflow/workflow-list';
 import { BatchOperationsToolbar } from '@/components/workflow/batch-operations-toolbar';
 import { ShareStatsCard } from '@/components/share/share-stats-card';
+import { SkeletonCard } from '@/components/ui/skeleton-card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,17 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, BarChart3 } from 'lucide-react';
+import { Plus, Search, BarChart3, Workflow } from 'lucide-react';
 import Link from 'next/link';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function WorkflowsPage() {
   const [search, setSearch] = useState('');
@@ -37,6 +33,9 @@ export default function WorkflowsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showStats, setShowStats] = useState(false);
+
+  const { success, error } = useToastContext();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
   const { workflows, total, isLoading, deleteWorkflow, refetch } = useWorkflows({
     search,
@@ -53,20 +52,28 @@ export default function WorkflowsPage() {
     batchPublish,
     batchUnpublish,
     batchArchive,
-    reset: resetBatch,
   } = useBatchOperations();
 
   const handleDelete = async () => {
     if (deleteId) {
-      await deleteWorkflow(deleteId);
-      setDeleteId(null);
+      try {
+        await deleteWorkflow(deleteId);
+        success('工作流已删除');
+        setDeleteId(null);
+      } catch (err) {
+        error(err instanceof Error ? err.message : '删除失败');
+      }
     }
   };
 
   const handleBatchDelete = async (ids: string[]) => {
     const result = await batchDelete(ids);
     if (result.failed.length === 0) {
+      success(`成功删除 ${result.success.length} 个工作流`);
       refetch();
+      setSelectedIds([]);
+    } else {
+      error(`${result.failed.length} 个工作流删除失败`);
     }
     return result;
   };
@@ -74,7 +81,11 @@ export default function WorkflowsPage() {
   const handleBatchPublish = async (ids: string[]) => {
     const result = await batchPublish(ids);
     if (result.failed.length === 0) {
+      success(`成功发布 ${result.success.length} 个工作流`);
       refetch();
+      setSelectedIds([]);
+    } else {
+      error(`${result.failed.length} 个工作流发布失败`);
     }
     return result;
   };
@@ -82,7 +93,11 @@ export default function WorkflowsPage() {
   const handleBatchUnpublish = async (ids: string[]) => {
     const result = await batchUnpublish(ids);
     if (result.failed.length === 0) {
+      success(`成功取消发布 ${result.success.length} 个工作流`);
       refetch();
+      setSelectedIds([]);
+    } else {
+      error(`${result.failed.length} 个工作流取消发布失败`);
     }
     return result;
   };
@@ -90,9 +105,27 @@ export default function WorkflowsPage() {
   const handleBatchArchive = async (ids: string[]) => {
     const result = await batchArchive(ids);
     if (result.failed.length === 0) {
+      success(`成功归档 ${result.success.length} 个工作流`);
       refetch();
+      setSelectedIds([]);
+    } else {
+      error(`${result.failed.length} 个工作流归档失败`);
     }
     return result;
+  };
+
+  const handleDeleteClick = async (id: string) => {
+    const confirmed = await confirm({
+      title: '确认删除',
+      description: '确定要删除这个工作流吗？此操作无法撤销。',
+      confirmText: '删除',
+      cancelText: '取消',
+      variant: 'destructive',
+    });
+    if (confirmed) {
+      setDeleteId(id);
+      handleDelete();
+    }
   };
 
   return (
@@ -184,41 +217,47 @@ export default function WorkflowsPage() {
           </div>
 
           {/* 工作流列表 */}
-          <WorkflowList
-            workflows={workflows}
-            isLoading={isLoading}
-            onDelete={setDeleteId}
-            selectedIds={selectedIds}
-            onToggleSelect={(id) => {
-              if (selectedIds.includes(id)) {
-                setSelectedIds(selectedIds.filter((sid) => sid !== id));
-              } else {
-                setSelectedIds([...selectedIds, id]);
-              }
-            }}
-          />
+          {isLoading ? (
+            <SkeletonCard count={6} columns={3} />
+          ) : workflows.length === 0 ? (
+            <EmptyState
+              icon={Workflow}
+              title="暂无工作流"
+              description="您还没有创建任何工作流。点击下方的按钮创建您的第一个工作流。"
+              action={{
+                label: '创建工作流',
+                onClick: () => window.location.href = '/workflows/new',
+              }}
+            />
+          ) : (
+            <WorkflowList
+              workflows={workflows}
+              isLoading={isLoading}
+              onDelete={handleDeleteClick}
+              selectedIds={selectedIds}
+              onToggleSelect={(id) => {
+                if (selectedIds.includes(id)) {
+                  setSelectedIds(selectedIds.filter((sid) => sid !== id));
+                } else {
+                  setSelectedIds([...selectedIds, id]);
+                }
+              }}
+            />
+          )}
         </div>
       </main>
 
-      {/* 删除确认弹窗 */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>确认删除</DialogTitle>
-            <DialogDescription>
-              确定要删除这个工作流吗？此操作无法撤销。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>
-              取消
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              删除
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 确认对话框 */}
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        variant={confirmState.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }
