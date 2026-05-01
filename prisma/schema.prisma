@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  avatar    String?
+  password  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflows Workflow[]
+}
+
+model Workflow {
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  status      WorkflowStatus @default(DRAFT)
+  userId      String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares   Share[]
+  versions WorkflowVersion[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model WorkflowVersion {
+  id          String   @id @default(uuid())
+  workflowId  String
+  version     Int
+  title       String
+  description String?
+  nodes       Json
+  createdAt   DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, version])
+  @@index([workflowId])
+}
+
+model Share {
+  id          String    @id @default(uuid())
+  workflowId  String
+  shareToken  String    @unique
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  viewCount   Int       @default(0)
+  allowExport Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([shareToken])
+  @@index([workflowId])
+}
+
+enum WorkflowStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
