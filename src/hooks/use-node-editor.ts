@@ -22,49 +22,61 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
     return nodes.find((node) => node.id === selectedNodeId) || null;
   }, [nodes, selectedNodeId]);
 
-  // 包装 setNodes 以触发 onChange
+  // 包装 setNodes 以触发 onChange - 使用函数式更新避免闭包问题
   const setNodes = useCallback((newNodes: WorkflowNode[] | ((prev: WorkflowNode[]) => WorkflowNode[])) => {
-    const updatedNodes = typeof newNodes === 'function' 
-      ? newNodes(nodes) 
-      : newNodes;
-    setNodesState(updatedNodes);
-    onChangeRef.current?.(updatedNodes);
-  }, [nodes]);
+    setNodesState((prevNodes) => {
+      const updatedNodes = typeof newNodes === 'function' 
+        ? (newNodes as Function)(prevNodes) 
+        : newNodes;
+      onChangeRef.current?.(updatedNodes);
+      return updatedNodes;
+    });
+  }, []);
 
+  // 使用函数式更新避免依赖 nodes
   const addNode = useCallback((type: NodeType) => {
-    const newNode = createNode(type, nodes.length + 1);
-    const updatedNodes = [...nodes, newNode];
-    setNodesState(updatedNodes);
-    setSelectedNodeId(newNode.id);
-    onChangeRef.current?.(updatedNodes);
-    return newNode;
-  }, [nodes]);
+    let newNodeId: string = '';
+    setNodesState((prevNodes) => {
+      const newNode = createNode(type, prevNodes.length + 1);
+      newNodeId = newNode.id;
+      const updatedNodes = [...prevNodes, newNode];
+      onChangeRef.current?.(updatedNodes);
+      return updatedNodes;
+    });
+    setSelectedNodeId(newNodeId);
+  }, []);
 
   const updateNode = useCallback((nodeId: string, updates: Partial<WorkflowNode>) => {
-    const updatedNodes = nodes.map((node) =>
-      node.id === nodeId ? { ...node, ...updates } as WorkflowNode : node
-    );
-    setNodesState(updatedNodes);
-    onChangeRef.current?.(updatedNodes);
-  }, [nodes]);
+    setNodesState((prevNodes) => {
+      const updatedNodes = prevNodes.map((node) =>
+        node.id === nodeId ? { ...node, ...updates } as WorkflowNode : node
+      );
+      onChangeRef.current?.(updatedNodes);
+      return updatedNodes;
+    });
+  }, []);
 
   const deleteNode = useCallback((nodeId: string) => {
-    const filteredNodes = nodes.filter((node) => node.id !== nodeId);
-    // 重新排序 position
-    const reorderedNodes = filteredNodes.map((node, index) => ({
-      ...node,
-      position: index + 1,
-    }));
-    setNodesState(reorderedNodes);
+    setNodesState((prevNodes) => {
+      const filteredNodes = prevNodes.filter((node) => node.id !== nodeId);
+      // 重新排序 position
+      const reorderedNodes = filteredNodes.map((node, index) => ({
+        ...node,
+        position: index + 1,
+      }));
+      onChangeRef.current?.(reorderedNodes);
+      return reorderedNodes;
+    });
     setSelectedNodeId((prev) => prev === nodeId ? null : prev);
-    onChangeRef.current?.(reorderedNodes);
-  }, [nodes]);
+  }, []);
 
   const moveNode = useCallback((fromIndex: number, toIndex: number) => {
-    const updatedNodes = reorderNodes(nodes, fromIndex, toIndex);
-    setNodesState(updatedNodes);
-    onChangeRef.current?.(updatedNodes);
-  }, [nodes]);
+    setNodesState((prevNodes) => {
+      const updatedNodes = reorderNodes(prevNodes, fromIndex, toIndex);
+      onChangeRef.current?.(updatedNodes);
+      return updatedNodes;
+    });
+  }, []);
 
   const selectNode = useCallback((nodeId: string | null) => {
     setSelectedNodeId(nodeId);
@@ -78,7 +90,7 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
   return {
     nodes,
     selectedNodeId,
-    selectedNode, // 直接返回选中的节点
+    selectedNode,
     addNode,
     updateNode,
     deleteNode,
