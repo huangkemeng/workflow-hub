@@ -26,6 +26,8 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
     const updatedNodes = typeof newNodes === 'function' 
       ? newNodes(nodesRef.current) 
       : newNodes;
+    // 立即更新 ref，确保 getSelectedNode 能获取最新数据
+    nodesRef.current = updatedNodes;
     setNodesState(updatedNodes);
     // 使用 ref 调用 onChange，避免依赖问题
     onChangeRef.current?.(updatedNodes);
@@ -35,6 +37,8 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
     const currentNodes = nodesRef.current;
     const newNode = createNode(type, currentNodes.length + 1);
     const updatedNodes = [...currentNodes, newNode];
+    // 立即更新 ref，确保 getSelectedNode 能获取最新数据
+    nodesRef.current = updatedNodes;
     setNodesState(updatedNodes);
     setSelectedNodeId(newNode.id);
     onChangeRef.current?.(updatedNodes);
@@ -46,6 +50,8 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
     const updatedNodes = currentNodes.map((node) =>
       node.id === nodeId ? { ...node, ...updates } as WorkflowNode : node
     );
+    // 立即更新 ref，确保 getSelectedNode 能获取最新数据
+    nodesRef.current = updatedNodes;
     setNodesState(updatedNodes);
     onChangeRef.current?.(updatedNodes);
   }, []); // 空依赖数组
@@ -58,6 +64,8 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
       ...node,
       position: index + 1,
     }));
+    // 立即更新 ref，确保 getSelectedNode 能获取最新数据
+    nodesRef.current = reorderedNodes;
     setNodesState(reorderedNodes);
     setSelectedNodeId((prev) => prev === nodeId ? null : prev);
     onChangeRef.current?.(reorderedNodes);
@@ -66,6 +74,8 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
   const moveNode = useCallback((fromIndex: number, toIndex: number) => {
     const currentNodes = nodesRef.current;
     const updatedNodes = reorderNodes(currentNodes, fromIndex, toIndex);
+    // 立即更新 ref，确保 getSelectedNode 能获取最新数据
+    nodesRef.current = updatedNodes;
     setNodesState(updatedNodes);
     onChangeRef.current?.(updatedNodes);
   }, []); // 空依赖数组

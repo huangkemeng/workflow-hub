@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ReactNode } from 'react';
+import { ReactNode, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { GripVertical } from 'lucide-react';
 
@@ -29,6 +29,12 @@ export function SortableNode({ id, children, isSelected, isDisabled }: SortableN
     zIndex: isDragging ? 50 : 'auto',
   };
 
+  // 使用 ref 来存储拖拽状态，避免闭包问题
+  const isDraggingRef = useRef(isDragging);
+  useEffect(() => {
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
+
   return (
     <div
       ref={setNodeRef}
@@ -48,15 +54,23 @@ export function SortableNode({ id, children, isSelected, isDisabled }: SortableN
           'opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing',
           isDragging && 'opacity-100 cursor-grabbing'
         )}
-        onClick={(e) => e.stopPropagation()} // 阻止点击事件冒泡
+        onPointerDown={(e) => e.stopPropagation()} // 阻止指针事件冒泡
       >
         <div className="p-1 rounded bg-muted hover:bg-muted-foreground/20">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
       </div>
 
-      {/* 节点内容 - 不可拖拽 */}
-      <div className="relative">
+      {/* 节点内容 - 不可拖拽，点击事件正常传播 */}
+      <div 
+        className="relative"
+        onPointerDown={(e) => {
+          // 如果正在拖拽，阻止点击事件
+          if (isDraggingRef.current) {
+            e.stopPropagation();
+          }
+        }}
+      >
         {children}
       </div>
     </div>

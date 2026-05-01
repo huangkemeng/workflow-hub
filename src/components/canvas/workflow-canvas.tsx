@@ -5,7 +5,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -74,11 +75,18 @@ export function WorkflowCanvas({
     nodesRef.current = nodes;
   }, [nodes]);
 
-  // 配置拖拽传感器 - 增加触发距离，避免误触发
+  // 配置拖拽传感器 - 使用 MouseSensor 和 TouchSensor 替代 PointerSensor
+  // 确保点击事件能正常传播到节点
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 10, // 需要移动 10px 才开始拖拽
+        distance: 8, // 需要移动 8px 才开始拖拽
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 触摸延迟 200ms，避免误触
+        tolerance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
