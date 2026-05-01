@@ -9,6 +9,29 @@ const createWorkflowSchema = z.object({
   description: z.string().max(500, '描述最多500字符').optional(),
 })
 
+// 解析排序参数，支持格式: "updated-desc", "updated-asc", "created-desc", "created-asc", "title-asc", "title-desc"
+function parseSortParam(sortParam: string | null): { sort: 'updatedAt' | 'createdAt' | 'title'; order: 'asc' | 'desc' } {
+  if (!sortParam) {
+    return { sort: 'updatedAt', order: 'desc' }
+  }
+
+  const parts = sortParam.split('-')
+  const field = parts[0]
+  const direction = parts[1] as 'asc' | 'desc' | undefined
+
+  // 映射字段名
+  const sortFieldMap: Record<string, 'updatedAt' | 'createdAt' | 'title'> = {
+    'updated': 'updatedAt',
+    'created': 'createdAt',
+    'title': 'title',
+  }
+
+  const sort = sortFieldMap[field] || 'updatedAt'
+  const order = direction === 'asc' ? 'asc' : 'desc'
+
+  return { sort, order }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -20,8 +43,10 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || undefined
-    const sort = (searchParams.get('sort') as 'createdAt' | 'updatedAt' | 'title') || 'updatedAt'
-    const order = (searchParams.get('order') as 'asc' | 'desc') || 'desc'
+    const sortParam = searchParams.get('sort')
+
+    // 解析排序参数
+    const { sort, order } = parseSortParam(sortParam)
 
     const result = await getWorkflows(session.user.id, {
       page,
@@ -35,7 +60,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('获取工作流列表失败:', error)
     return NextResponse.json(
-      { error: '获取工作流列表失败' },
+      { error: '获取工作流列表失败', details: error instanceof Error ? error.message : '未知错误' },
       { status: 500 }
     )
   }
@@ -64,7 +89,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('创建工作流失败:', error)
     return NextResponse.json(
-      { error: '创建工作流失败' },
+      { error: '创建工作流失败', details: error instanceof Error ? error.message : '未知错误' },
       { status: 500 }
     )
   }

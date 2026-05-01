@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWorkflows } from '@/hooks/use-workflows';
 import { useShareStats } from '@/hooks/use-share-stats';
 import { useBatchOperations } from '@/hooks/use-batch-operations';
@@ -40,11 +40,18 @@ export default function WorkflowsPage() {
   const { success, error } = useToastContext();
   const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
-  const { workflows, total, isLoading, deleteWorkflow, refetch } = useWorkflows({
+  const { workflows, total, isLoading, error: workflowsError, deleteWorkflow, refetch } = useWorkflows({
     search,
     status: status === 'all' ? undefined : status,
     sort,
   });
+
+  // 显示错误提示
+  useEffect(() => {
+    if (workflowsError) {
+      error(workflowsError);
+    }
+  }, [workflowsError, error]);
 
   const { stats: shareStats, isLoading: statsLoading } = useShareStats();
 
