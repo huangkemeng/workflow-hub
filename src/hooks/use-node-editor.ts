@@ -21,19 +21,15 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  // 触发 onChange 的辅助函数
-  const triggerOnChange = useCallback((updatedNodes: WorkflowNode[]) => {
-    onChangeRef.current?.(updatedNodes);
-  }, []);
-
   // 包装 setNodes 以触发 onChange
   const setNodes = useCallback((newNodes: WorkflowNode[] | ((prev: WorkflowNode[]) => WorkflowNode[])) => {
     const updatedNodes = typeof newNodes === 'function' 
       ? newNodes(nodesRef.current) 
       : newNodes;
     setNodesState(updatedNodes);
-    triggerOnChange(updatedNodes);
-  }, [triggerOnChange]);
+    // 使用 ref 调用 onChange，避免依赖问题
+    onChangeRef.current?.(updatedNodes);
+  }, []); // 空依赖数组，不依赖任何外部变量
 
   const addNode = useCallback((type: NodeType) => {
     const currentNodes = nodesRef.current;
@@ -41,9 +37,9 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
     const updatedNodes = [...currentNodes, newNode];
     setNodesState(updatedNodes);
     setSelectedNodeId(newNode.id);
-    triggerOnChange(updatedNodes);
+    onChangeRef.current?.(updatedNodes);
     return newNode;
-  }, [triggerOnChange]);
+  }, []); // 空依赖数组
 
   const updateNode = useCallback((nodeId: string, updates: Partial<WorkflowNode>) => {
     const currentNodes = nodesRef.current;
@@ -51,8 +47,8 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
       node.id === nodeId ? { ...node, ...updates } as WorkflowNode : node
     );
     setNodesState(updatedNodes);
-    triggerOnChange(updatedNodes);
-  }, [triggerOnChange]);
+    onChangeRef.current?.(updatedNodes);
+  }, []); // 空依赖数组
 
   const deleteNode = useCallback((nodeId: string) => {
     const currentNodes = nodesRef.current;
@@ -63,18 +59,16 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
       position: index + 1,
     }));
     setNodesState(reorderedNodes);
-    if (selectedNodeId === nodeId) {
-      setSelectedNodeId(null);
-    }
-    triggerOnChange(reorderedNodes);
-  }, [selectedNodeId, triggerOnChange]);
+    setSelectedNodeId((prev) => prev === nodeId ? null : prev);
+    onChangeRef.current?.(reorderedNodes);
+  }, []); // 空依赖数组，使用函数式更新 selectedNodeId
 
   const moveNode = useCallback((fromIndex: number, toIndex: number) => {
     const currentNodes = nodesRef.current;
     const updatedNodes = reorderNodes(currentNodes, fromIndex, toIndex);
     setNodesState(updatedNodes);
-    triggerOnChange(updatedNodes);
-  }, [triggerOnChange]);
+    onChangeRef.current?.(updatedNodes);
+  }, []); // 空依赖数组
 
   const selectNode = useCallback((nodeId: string | null) => {
     setSelectedNodeId(nodeId);
@@ -82,7 +76,7 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
 
   const getSelectedNode = useCallback(() => {
     return nodesRef.current.find((node) => node.id === selectedNodeId) || null;
-  }, [selectedNodeId]);
+  }, [selectedNodeId]); // 只依赖 selectedNodeId
 
   return {
     nodes,
