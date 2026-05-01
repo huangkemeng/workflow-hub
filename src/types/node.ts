@@ -89,6 +89,7 @@ export interface LoopIteration {
   result?: string;
   feedback?: string;
   completedAt?: string;
+  passed?: boolean;
 }
 
 export interface LoopNode extends BaseNode {

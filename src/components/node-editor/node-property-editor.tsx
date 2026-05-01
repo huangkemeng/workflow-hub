@@ -5,6 +5,8 @@ import { Connection } from '@/types/connection';
 import { StandardNodeForm } from './standard-node-form';
 import { DecisionNodeForm } from './decision-node-form';
 import { NoteNodeForm } from './note-node-form';
+import { ParallelNodeForm } from './parallel-node-form';
+import { LoopNodeForm } from './loop-node-form';
 import { SubflowNodeForm } from './subflow-node-form';
 import { NodeTypeSwitcher } from './node-type-switcher';
 import { ConnectionEditor } from './connection-editor';
@@ -98,6 +100,20 @@ export function NodePropertyEditor({
             currentWorkflowId="temp-workflow-id"
             data={node.data}
             onChange={(data) => onChange({ data })}
+          />
+        );
+      case 'parallel':
+        return (
+          <ParallelNodeForm
+            node={node}
+            onChange={onChange as any}
+          />
+        );
+      case 'loop':
+        return (
+          <LoopNodeForm
+            node={node}
+            onChange={onChange as any}
           />
         );
       default:

@@ -2,9 +2,13 @@
 
 import { useState } from 'react';
 import { useWorkflows } from '@/hooks/use-workflows';
+import { useShareStats } from '@/hooks/use-share-stats';
+import { useBatchOperations } from '@/hooks/use-batch-operations';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { WorkflowList } from '@/components/workflow/workflow-list';
+import { BatchOperationsToolbar } from '@/components/workflow/batch-operations-toolbar';
+import { ShareStatsCard } from '@/components/share/share-stats-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -24,24 +28,71 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function WorkflowsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [sort, setSort] = useState('updated-desc');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showStats, setShowStats] = useState(false);
 
-  const { workflows, total, isLoading, deleteWorkflow } = useWorkflows({
+  const { workflows, total, isLoading, deleteWorkflow, refetch } = useWorkflows({
     search,
     status: status === 'all' ? undefined : status,
     sort,
   });
+
+  const { stats: shareStats, isLoading: statsLoading } = useShareStats();
+
+  const {
+    isProcessing,
+    progress,
+    batchDelete,
+    batchPublish,
+    batchUnpublish,
+    batchArchive,
+    reset: resetBatch,
+  } = useBatchOperations();
 
   const handleDelete = async () => {
     if (deleteId) {
       await deleteWorkflow(deleteId);
       setDeleteId(null);
     }
+  };
+
+  const handleBatchDelete = async (ids: string[]) => {
+    const result = await batchDelete(ids);
+    if (result.failed.length === 0) {
+      refetch();
+    }
+    return result;
+  };
+
+  const handleBatchPublish = async (ids: string[]) => {
+    const result = await batchPublish(ids);
+    if (result.failed.length === 0) {
+      refetch();
+    }
+    return result;
+  };
+
+  const handleBatchUnpublish = async (ids: string[]) => {
+    const result = await batchUnpublish(ids);
+    if (result.failed.length === 0) {
+      refetch();
+    }
+    return result;
+  };
+
+  const handleBatchArchive = async (ids: string[]) => {
+    const result = await batchArchive(ids);
+    if (result.failed.length === 0) {
+      refetch();
+    }
+    return result;
   };
 
   return (
@@ -58,13 +109,29 @@ export default function WorkflowsPage() {
                 管理您的工作流，共 {total} 个
               </p>
             </div>
-            <Link href="/workflows/new">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                创建工作流
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowStats(!showStats)}
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                {showStats ? '隐藏统计' : '分享统计'}
               </Button>
-            </Link>
+              <Link href="/workflows/new">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  创建工作流
+                </Button>
+              </Link>
+            </div>
           </div>
+
+          {/* 分享统计 */}
+          {showStats && (
+            <div className="mb-6">
+              <ShareStatsCard stats={shareStats} isLoading={statsLoading} />
+            </div>
+          )}
 
           {/* 搜索和筛选 */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -101,11 +168,34 @@ export default function WorkflowsPage() {
             </Select>
           </div>
 
+          {/* 批量操作工具栏 */}
+          <div className="mb-4">
+            <BatchOperationsToolbar
+              workflows={workflows}
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+              onBatchDelete={handleBatchDelete}
+              onBatchPublish={handleBatchPublish}
+              onBatchUnpublish={handleBatchUnpublish}
+              onBatchArchive={handleBatchArchive}
+              isProcessing={isProcessing}
+              progress={progress}
+            />
+          </div>
+
           {/* 工作流列表 */}
           <WorkflowList
             workflows={workflows}
             isLoading={isLoading}
             onDelete={setDeleteId}
+            selectedIds={selectedIds}
+            onToggleSelect={(id) => {
+              if (selectedIds.includes(id)) {
+                setSelectedIds(selectedIds.filter((sid) => sid !== id));
+              } else {
+                setSelectedIds([...selectedIds, id]);
+              }
+            }}
           />
         </div>
       </main>

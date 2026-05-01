@@ -5,7 +5,7 @@ import { WorkflowListItem } from '@/types/workflow';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, cn } from '@/lib/utils';
 import { GitBranch, Clock, MoreHorizontal, Edit, Share2, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -17,6 +17,7 @@ import {
 interface WorkflowCardProps {
   workflow: WorkflowListItem;
   onDelete?: (id: string) => void;
+  className?: string;
 }
 
 const statusMap = {
@@ -25,11 +26,14 @@ const statusMap = {
   ARCHIVED: { label: '已归档', variant: 'outline' as const },
 };
 
-export function WorkflowCard({ workflow, onDelete }: WorkflowCardProps) {
+export function WorkflowCard({ workflow, onDelete, className }: WorkflowCardProps) {
   const status = statusMap[workflow.status];
 
   return (
-    <Card className="group relative hover:shadow-md transition-shadow">
+    <Card className={cn(
+      "group relative hover:shadow-md transition-shadow",
+      className
+    )}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">

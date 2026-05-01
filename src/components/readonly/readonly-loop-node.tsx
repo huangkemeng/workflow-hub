@@ -3,7 +3,9 @@
 import { LoopNode } from '@/types/node';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, History } from 'lucide-react';
+import { RefreshCw, History, CheckCircle2, XCircle, HelpCircle, BarChart3 } from 'lucide-react';
+import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 
 interface ReadonlyLoopNodeProps {
   node: LoopNode;
@@ -12,6 +14,17 @@ interface ReadonlyLoopNodeProps {
 
 export function ReadonlyLoopNode({ node, stepNumber }: ReadonlyLoopNodeProps) {
   const iterationCount = node.data.iterations?.length || 0;
+  const passedCount = node.data.iterations?.filter(i => i.passed === true).length || 0;
+  const failedCount = node.data.iterations?.filter(i => i.passed === false).length || 0;
+  const pendingCount = node.data.iterations?.filter(i => i.passed === undefined).length || 0;
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'yyyy-MM-dd HH:mm', { locale: zhCN });
+    } catch {
+      return dateString;
+    }
+  };
 
   return (
     <Card>
@@ -51,20 +64,59 @@ export function ReadonlyLoopNode({ node, stepNumber }: ReadonlyLoopNodeProps) {
           </div>
         )}
 
+        {/* 迭代统计 */}
+        {iterationCount > 0 && (
+          <div className="p-4 bg-muted rounded-lg space-y-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">迭代统计</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="text-lg font-bold">{passedCount}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">通过</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 text-red-600">
+                  <XCircle className="h-4 w-4" />
+                  <span className="text-lg font-bold">{failedCount}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">未通过</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 text-yellow-600">
+                  <HelpCircle className="h-4 w-4" />
+                  <span className="text-lg font-bold">{pendingCount}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">待评估</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 迭代历史 */}
         {node.data.iterations && node.data.iterations.length > 0 && (
           <div className="space-y-3">
             <p className="text-sm font-medium">迭代历史</p>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-64 overflow-y-auto">
               {node.data.iterations.map((iteration) => (
                 <div
                   key={iteration.id}
                   className="flex items-start gap-3 p-3 rounded-lg border"
                 >
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
+                  <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                    iteration.passed === true
+                      ? 'bg-green-100 text-green-700'
+                      : iteration.passed === false
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-primary/10 text-primary'
+                  }`}>
                     {iteration.iteration}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     {iteration.result && (
                       <p className="text-sm">{iteration.result}</p>
                     )}
@@ -73,7 +125,19 @@ export function ReadonlyLoopNode({ node, stepNumber }: ReadonlyLoopNodeProps) {
                         反馈: {iteration.feedback}
                       </p>
                     )}
+                    {iteration.completedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        完成时间: {formatDate(iteration.completedAt)}
+                      </p>
+                    )}
                   </div>
+                  {iteration.passed === true ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                  ) : iteration.passed === false ? (
+                    <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                  ) : (
+                    <HelpCircle className="h-5 w-5 text-muted-foreground shrink-0" />
+                  )}
                 </div>
               ))}
             </div>

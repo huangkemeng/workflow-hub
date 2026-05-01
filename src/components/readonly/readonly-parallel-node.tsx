@@ -3,7 +3,7 @@
 import { ParallelNode } from '@/types/node';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Layers, CheckCircle2, Clock, User } from 'lucide-react';
+import { Layers, CheckCircle2, Clock, User, Link2, GitMerge } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 interface ReadonlyParallelNodeProps {
@@ -27,6 +27,7 @@ export function ReadonlyParallelNode({ node, stepNumber }: ReadonlyParallelNodeP
   const completedCount = node.data.tasks.filter((t) => t.status === 'completed').length;
   const totalCount = node.data.tasks.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const tasksWithDeps = node.data.tasks.filter(t => t.dependencies && t.dependencies.length > 0);
 
   return (
     <Card>
@@ -64,6 +65,7 @@ export function ReadonlyParallelNode({ node, stepNumber }: ReadonlyParallelNodeP
             {node.data.tasks.map((task) => {
               const status = task.status ? statusMap[task.status] : null;
               const priority = task.priority ? priorityMap[task.priority] : null;
+              const hasDeps = task.dependencies && task.dependencies.length > 0;
 
               return (
                 <div
@@ -77,7 +79,15 @@ export function ReadonlyParallelNode({ node, stepNumber }: ReadonlyParallelNodeP
                         : 'text-muted-foreground'
                     }`}
                   />
-                  <span className="flex-1 text-sm">{task.title}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm block">{task.title}</span>
+                    {hasDeps && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Link2 className="h-3 w-3" />
+                        依赖 {task.dependencies!.length} 个任务
+                      </span>
+                    )}
+                  </div>
                   {task.assignee && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <User className="h-3 w-3" />
@@ -105,6 +115,49 @@ export function ReadonlyParallelNode({ node, stepNumber }: ReadonlyParallelNodeP
             })}
           </div>
         </div>
+
+        {/* 任务依赖图 */}
+        {tasksWithDeps.length > 0 && (
+          <div className="p-3 bg-muted rounded-lg">
+            <p className="text-sm font-medium mb-2 flex items-center gap-2">
+              <Link2 className="h-4 w-4" />
+              任务依赖关系
+            </p>
+            <div className="space-y-1 text-sm">
+              {tasksWithDeps.map(task => (
+                <div key={task.id} className="flex items-center gap-2">
+                  <span className="font-medium">{task.title}</span>
+                  <span className="text-muted-foreground">依赖</span>
+                  <div className="flex items-center gap-1">
+                    {task.dependencies!.map(depId => {
+                      const depTask = node.data.tasks.find(t => t.id === depId);
+                      return depTask ? (
+                        <Badge key={depId} variant="outline" className="text-xs">
+                          {depTask.title}
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 同步点 */}
+        {node.data.syncPoint?.enabled && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm font-medium text-blue-800 flex items-center gap-2">
+              <GitMerge className="h-4 w-4" />
+              同步点
+            </p>
+            {node.data.syncPoint.description && (
+              <p className="text-sm text-blue-700 mt-1">
+                {node.data.syncPoint.description}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* 完成条件 */}
         <div className="p-3 bg-muted rounded-lg">

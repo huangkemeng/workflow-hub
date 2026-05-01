@@ -5,15 +5,24 @@ import { WorkflowCard } from './workflow-card';
 import { Card, CardContent } from '@/components/ui/card';
 import { Workflow, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
 
 interface WorkflowListProps {
   workflows: WorkflowListItem[];
   isLoading: boolean;
   onDelete?: (id: string) => void;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
 }
 
-export function WorkflowList({ workflows, isLoading, onDelete }: WorkflowListProps) {
+export function WorkflowList({
+  workflows,
+  isLoading,
+  onDelete,
+  selectedIds = [],
+  onToggleSelect,
+}: WorkflowListProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -53,11 +62,22 @@ export function WorkflowList({ workflows, isLoading, onDelete }: WorkflowListPro
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {workflows.map((workflow) => (
-        <WorkflowCard
-          key={workflow.id}
-          workflow={workflow}
-          onDelete={onDelete}
-        />
+        <div key={workflow.id} className="relative group">
+          {onToggleSelect && (
+            <div className="absolute top-3 left-3 z-10">
+              <Checkbox
+                checked={selectedIds.includes(workflow.id)}
+                onCheckedChange={() => onToggleSelect(workflow.id)}
+                className="h-5 w-5 border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              />
+            </div>
+          )}
+          <WorkflowCard
+            workflow={workflow}
+            onDelete={onDelete}
+            className={onToggleSelect && selectedIds.includes(workflow.id) ? 'ring-2 ring-primary' : ''}
+          />
+        </div>
       ))}
     </div>
   );

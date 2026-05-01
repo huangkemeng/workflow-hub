@@ -3,7 +3,7 @@
 import { LoopNode } from '@/types/node';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, RotateCcw, History } from 'lucide-react';
+import { RefreshCw, RotateCcw, History, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
 
 interface LoopNodeViewProps {
   node: LoopNode;
@@ -13,6 +13,9 @@ interface LoopNodeViewProps {
 
 export function LoopNodeView({ node, isSelected, onClick }: LoopNodeViewProps) {
   const iterationCount = node.data.iterations?.length || 0;
+  const passedCount = node.data.iterations?.filter(i => i.passed === true).length || 0;
+  const failedCount = node.data.iterations?.filter(i => i.passed === false).length || 0;
+  const pendingCount = node.data.iterations?.filter(i => i.passed === undefined).length || 0;
 
   return (
     <Card
@@ -54,17 +57,47 @@ export function LoopNodeView({ node, isSelected, onClick }: LoopNodeViewProps) {
           </div>
         )}
 
+        {/* 迭代统计 */}
+        {iterationCount > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            {passedCount > 0 && (
+              <span className="flex items-center gap-1 text-green-600">
+                <CheckCircle2 className="h-3 w-3" />
+                {passedCount} 通过
+              </span>
+            )}
+            {failedCount > 0 && (
+              <span className="flex items-center gap-1 text-red-600">
+                <XCircle className="h-3 w-3" />
+                {failedCount} 未通过
+              </span>
+            )}
+            {pendingCount > 0 && (
+              <span className="flex items-center gap-1 text-yellow-600">
+                <HelpCircle className="h-3 w-3" />
+                {pendingCount} 待评估
+              </span>
+            )}
+          </div>
+        )}
+
         {/* 迭代历史 */}
         {node.data.iterations && node.data.iterations.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground font-medium">迭代历史</p>
             <div className="space-y-1 max-h-24 overflow-y-auto">
-              {node.data.iterations.map((iteration) => (
+              {node.data.iterations.slice(-3).map((iteration) => (
                 <div
                   key={iteration.id}
                   className="flex items-center gap-2 p-1.5 rounded bg-muted/50 text-sm"
                 >
-                  <History className="h-3 w-3 text-muted-foreground" />
+                  {iteration.passed === true ? (
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  ) : iteration.passed === false ? (
+                    <XCircle className="h-3 w-3 text-red-500" />
+                  ) : (
+                    <History className="h-3 w-3 text-muted-foreground" />
+                  )}
                   <span className="font-medium">第 {iteration.iteration} 轮</span>
                   {iteration.result && (
                     <span className="text-muted-foreground truncate flex-1">
@@ -73,6 +106,11 @@ export function LoopNodeView({ node, isSelected, onClick }: LoopNodeViewProps) {
                   )}
                 </div>
               ))}
+              {node.data.iterations.length > 3 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  还有 {node.data.iterations.length - 3} 条记录...
+                </p>
+              )}
             </div>
           </div>
         )}

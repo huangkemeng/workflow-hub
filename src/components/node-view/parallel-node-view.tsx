@@ -3,7 +3,7 @@
 import { ParallelNode } from '@/types/node';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Layers, CheckCircle2, Clock, User } from 'lucide-react';
+import { Layers, CheckCircle2, Clock, User, Link2 } from 'lucide-react';
 
 interface ParallelNodeViewProps {
   node: ParallelNode;
@@ -26,6 +26,7 @@ const priorityMap = {
 export function ParallelNodeView({ node, isSelected, onClick }: ParallelNodeViewProps) {
   const completedCount = node.data.tasks.filter(t => t.status === 'completed').length;
   const totalCount = node.data.tasks.length;
+  const tasksWithDeps = node.data.tasks.filter(t => t.dependencies && t.dependencies.length > 0);
 
   return (
     <Card
@@ -52,7 +53,8 @@ export function ParallelNodeView({ node, isSelected, onClick }: ParallelNodeView
         {node.data.tasks.map((task) => {
           const status = task.status ? statusMap[task.status] : null;
           const priority = task.priority ? priorityMap[task.priority] : null;
-          
+          const hasDeps = task.dependencies && task.dependencies.length > 0;
+
           return (
             <div
               key={task.id}
@@ -62,6 +64,12 @@ export function ParallelNodeView({ node, isSelected, onClick }: ParallelNodeView
                 task.status === 'completed' ? 'text-green-500' : 'text-muted-foreground'
               }`} />
               <span className="flex-1 text-sm truncate">{task.title}</span>
+              {hasDeps && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground" title={`${task.dependencies!.length} 个依赖`}>
+                  <Link2 className="h-3 w-3" />
+                  {task.dependencies!.length}
+                </div>
+              )}
               {task.assignee && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <User className="h-3 w-3" />
@@ -97,6 +105,23 @@ export function ParallelNodeView({ node, isSelected, onClick }: ParallelNodeView
             {node.data.completionCondition === 'n' && `${node.data.completionCount}个完成`}
           </p>
         </div>
+
+        {/* 同步点 */}
+        {node.data.syncPoint?.enabled && (
+          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+            <span className="font-medium">同步点:</span> {node.data.syncPoint.description || '已启用'}
+          </div>
+        )}
+
+        {/* 任务依赖汇总 */}
+        {tasksWithDeps.length > 0 && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Link2 className="h-3 w-3" />
+              {tasksWithDeps.length} 个任务有依赖关系
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
