@@ -1,8 +1,26 @@
 import { Workflow, WorkflowListItem, WorkflowVersion } from '@/types/workflow';
-import { mockWorkflows, mockWorkflowDetail, mockVersions } from '@/data/mock';
 
-// 模拟 API 延迟
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+async function fetchApi<T>(
+  url: string,
+  options?: RequestInit
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: '请求失败' }));
+    throw new Error(error.message || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
 
 export const api = {
   // 获取工作流列表
@@ -13,62 +31,27 @@ export const api = {
     page?: number;
     limit?: number;
   }): Promise<{ workflows: WorkflowListItem[]; total: number }> {
-    await delay(500);
-    
-    let workflows = [...mockWorkflows];
-    
-    // 搜索过滤
-    if (params?.search) {
-      const searchLower = params.search.toLowerCase();
-      workflows = workflows.filter(
-        w =>
-          w.title.toLowerCase().includes(searchLower) ||
-          w.description?.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // 状态过滤
-    if (params?.status && params.status !== 'all') {
-      workflows = workflows.filter(w => w.status === params.status);
-    }
-    
-    // 排序
-    if (params?.sort) {
-      switch (params.sort) {
-        case 'updated-desc':
-          workflows.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-          break;
-        case 'updated-asc':
-          workflows.sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
-          break;
-        case 'title-asc':
-          workflows.sort((a, b) => a.title.localeCompare(b.title));
-          break;
-        case 'title-desc':
-          workflows.sort((a, b) => b.title.localeCompare(a.title));
-          break;
-      }
-    }
-    
-    const total = workflows.length;
-    
-    // 分页
-    const page = params?.page || 1;
-    const limit = params?.limit || 10;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    workflows = workflows.slice(start, end);
-    
-    return { workflows, total };
+    const queryParams = new URLSearchParams();
+    if (params?.search) queryParams.set('search', params.search);
+    if (params?.status && params.status !== 'all') queryParams.set('status', params.status);
+    if (params?.sort) queryParams.set('sort', params.sort);
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+
+    const query = queryParams.toString();
+    return fetchApi(`/api/workflows${query ? `?${query}` : ''}`);
   },
 
   // 获取工作流详情
   async getWorkflow(id: string): Promise<Workflow | null> {
-    await delay(500);
-    if (id === 'wf-1') {
-      return mockWorkflowDetail;
+    try {
+      return await fetchApi<Workflow>(`/api/workflows/${id}`);
+    } catch (error) {
+      if ((error as Error).message.includes('404')) {
+        return null;
+      }
+      throw error;
     }
-    return null;
   },
 
   // 创建工作流
@@ -76,39 +59,89 @@ export const api = {
     title: string;
     description?: string;
   }): Promise<Workflow> {
-    await delay(500);
-    const newWorkflow: Workflow = {
-      id: `wf-${Date.now()}`,
-      title: data.title,
-      description: data.description,
-      status: 'DRAFT',
-      userId: 'user-1',
-      nodes: [],
-      currentVersion: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    return newWorkflow;
+    return fetchApi<Workflow>('/api/workflows', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // 更新工作流
+  async updateWorkflow(
+    id: string,
+    data: { title?: string; description?: string; nodes?: any[] }
+  ): Promise<Workflow> {
+    return fetchApi<Workflow>(`/api/workflows/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 
   // 删除工作流
   async deleteWorkflow(id: string): Promise<void> {
-    await delay(500);
-    console.log('Deleted workflow:', id);
+    await fetchApi(`/api/workflows/${id}`, {
+      method: 'DELETE',
+    });
   },
 
   // 获取版本历史
   async getVersions(workflowId: string): Promise<WorkflowVersion[]> {
-    await delay(500);
-    if (workflowId === 'wf-1') {
-      return mockVersions;
-    }
-    return [];
+    return fetchApi<WorkflowVersion[]>(`/api/workflows/${workflowId}/versions`);
   },
 
   // 回滚到指定版本
   async rollbackVersion(workflowId: string, versionId: string): Promise<void> {
-    await delay(500);
-    console.log('Rolled back workflow:', workflowId, 'to version:', versionId);
-  }
+    await fetchApi(`/api/workflows/${workflowId}/versions/${versionId}/rollback`, {
+      method: 'POST',
+    });
+  },
+
+  // 导出工作流
+  async exportWorkflow(workflowId: string, format: string): Promise<{ content: string; filename: string }> {
+    return fetchApi(`/api/workflows/${workflowId}/export?format=${format}`);
+  },
+
+  // 创建分享链接
+  async createShare(workflowId: string, data: { expiresInDays?: number | null; allowExport?: boolean }): Promise<any> {
+    return fetchApi(`/api/workflows/${workflowId}/share`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // 获取分享链接列表
+  async getShares(workflowId: string): Promise<any[]> {
+    return fetchApi<any[]>(`/api/workflows/${workflowId}/share`);
+  },
+
+  // 撤销分享
+  async revokeShare(workflowId: string, shareId: string): Promise<void> {
+    await fetchApi(`/api/workflows/${workflowId}/share/${shareId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // 获取分享的 workflow
+  async getSharedWorkflow(token: string): Promise<any> {
+    return fetchApi(`/api/share/${token}`);
+  },
+
+  // 通用 HTTP 方法（向后兼容）
+  async get(url: string): Promise<{ data: any }> {
+    const data = await fetchApi<any>(url);
+    return { data };
+  },
+
+  async post(url: string, body?: any): Promise<{ data: any }> {
+    const data = await fetchApi<any>(url, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    return { data };
+  },
+
+  async delete(url: string): Promise<void> {
+    await fetchApi(url, {
+      method: 'DELETE',
+    });
+  },
 };

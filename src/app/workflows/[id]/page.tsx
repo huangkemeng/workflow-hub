@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useWorkflow } from '@/hooks/use-workflows';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime } from '@/lib/utils';
+import { ExportModal } from '@/components/export/export-modal';
 import {
   ArrowLeft,
   Edit,
@@ -31,6 +33,7 @@ export default function WorkflowDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { workflow, isLoading, error } = useWorkflow(id);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -114,7 +117,7 @@ export default function WorkflowDetailPage() {
                   分享
                 </Button>
               </Link>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => setIsExportModalOpen(true)}>
                 <Download className="mr-2 h-4 w-4" />
                 导出
               </Button>
@@ -215,6 +218,15 @@ export default function WorkflowDetailPage() {
           </Card>
         </div>
       </main>
+
+      {/* 导出弹窗 */}
+      {workflow && (
+        <ExportModal
+          workflow={workflow}
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
