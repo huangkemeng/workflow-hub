@@ -59,6 +59,7 @@ export default function EditWorkflowPage() {
   const {
     connections,
     selectedConnectionId,
+    selectedConnection,
     isCreating,
     tempConnection,
     startConnection,
@@ -67,7 +68,6 @@ export default function EditWorkflowPage() {
     deleteConnection,
     updateConnection,
     selectConnection,
-    getSelectedConnection,
     setConnections,
   } = useConnections({
     initialConnections: [],
@@ -253,7 +253,7 @@ export default function EditWorkflowPage() {
             <NodePropertyEditor
               node={selectedNode}
               connections={connections}
-              selectedConnection={getSelectedConnection()}
+              selectedConnection={selectedConnection}
               onChange={handleUpdateNode}
               onDelete={handleDeleteNode}
               onUpdateConnection={updateConnection}
