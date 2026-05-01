@@ -39,7 +39,7 @@ export function SortableNode({ id, children, isSelected, isDisabled }: SortableN
         isSelected && 'z-10'
       )}
     >
-      {/* 拖拽手柄 */}
+      {/* 拖拽手柄 - 只有手柄可以触发拖拽 */}
       <div
         {...attributes}
         {...listeners}
@@ -48,14 +48,17 @@ export function SortableNode({ id, children, isSelected, isDisabled }: SortableN
           'opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing',
           isDragging && 'opacity-100 cursor-grabbing'
         )}
+        onClick={(e) => e.stopPropagation()} // 阻止点击事件冒泡
       >
         <div className="p-1 rounded bg-muted hover:bg-muted-foreground/20">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
       </div>
 
-      {/* 节点内容 */}
-      {children}
+      {/* 节点内容 - 不可拖拽 */}
+      <div className="relative">
+        {children}
+      </div>
     </div>
   );
 }
