@@ -1,11 +1,12 @@
 'use client';
 
-import { WorkflowNode } from '@/types/node';
+import { WorkflowNode, NodeType } from '@/types/node';
 import { Connection } from '@/types/connection';
 import { StandardNodeForm } from './standard-node-form';
 import { DecisionNodeForm } from './decision-node-form';
 import { NoteNodeForm } from './note-node-form';
 import { SubflowNodeForm } from './subflow-node-form';
+import { NodeTypeSwitcher } from './node-type-switcher';
 import { ConnectionEditor } from './connection-editor';
 import { Button } from '@/components/ui/button';
 import { Trash2, GitBranch } from 'lucide-react';
@@ -31,6 +32,7 @@ interface NodePropertyEditorProps {
   onDelete: () => void;
   onUpdateConnection: (connectionId: string, updates: Partial<Connection>) => void;
   onDeleteConnection: (connectionId: string) => void;
+  onSwitchType?: (newType: NodeType) => void;
 }
 
 export function NodePropertyEditor({
@@ -41,6 +43,7 @@ export function NodePropertyEditor({
   onDelete,
   onUpdateConnection,
   onDeleteConnection,
+  onSwitchType,
 }: NodePropertyEditorProps) {
   // 如果有选中的连接，显示连接编辑器
   if (selectedConnection) {
@@ -150,6 +153,15 @@ export function NodePropertyEditor({
               </AlertDialogContent>
             </AlertDialog>
           </div>
+
+          {/* 类型切换器 */}
+          {onSwitchType && (
+            <NodeTypeSwitcher
+              currentType={node.type}
+              onSwitch={onSwitchType}
+            />
+          )}
+
           {renderForm()}
         </div>
       </TabsContent>

@@ -76,9 +76,7 @@ export function createNode(type: NodeType, position: number): WorkflowNode {
       return {
         ...baseNode,
         type: 'subflow',
-        data: {
-          subflowType: 'embedded',
-        },
+        data: {},
       } as SubflowNode;
 
     case 'note':
@@ -150,7 +148,7 @@ export function reorderNodes(nodes: WorkflowNode[], fromIndex: number, toIndex: 
   const result = [...nodes];
   const [removed] = result.splice(fromIndex, 1);
   result.splice(toIndex, 0, removed);
-  
+
   // 更新 position
   return result.map((node, index) => ({
     ...node,
@@ -160,4 +158,184 @@ export function reorderNodes(nodes: WorkflowNode[], fromIndex: number, toIndex: 
 
 export function sortNodesByPosition(nodes: WorkflowNode[]): WorkflowNode[] {
   return [...nodes].sort((a, b) => a.position - b.position);
+}
+
+// 节点类型切换时的数据迁移
+export function migrateNodeData(
+  sourceNode: WorkflowNode,
+  targetType: NodeType
+): Partial<WorkflowNode> {
+  const baseData = {
+    title: sourceNode.title,
+    position: sourceNode.position,
+    config: sourceNode.config,
+  };
+
+  // 创建新节点以获取默认数据结构
+  const newNode = createNode(targetType, sourceNode.position);
+
+  // 根据源类型和目标类型进行数据迁移
+  switch (targetType) {
+    case 'standard':
+      return {
+        ...baseData,
+        type: 'standard',
+        data: migrateToStandardData(sourceNode),
+      } as StandardNode;
+
+    case 'decision':
+      return {
+        ...baseData,
+        type: 'decision',
+        data: migrateToDecisionData(sourceNode),
+      } as DecisionNode;
+
+    case 'parallel':
+      return {
+        ...baseData,
+        type: 'parallel',
+        data: newNode.data,
+      } as ParallelNode;
+
+    case 'loop':
+      return {
+        ...baseData,
+        type: 'loop',
+        data: newNode.data,
+      } as LoopNode;
+
+    case 'subflow':
+      return {
+        ...baseData,
+        type: 'subflow',
+        data: newNode.data,
+      } as SubflowNode;
+
+    case 'note':
+      return {
+        ...baseData,
+        type: 'note',
+        data: migrateToNoteData(sourceNode),
+      } as NoteNode;
+
+    default:
+      return newNode;
+  }
+}
+
+// 迁移到标准节点数据
+function migrateToStandardData(sourceNode: WorkflowNode): StandardNode['data'] {
+  const baseData = {
+    characters: [],
+    tags: [],
+    status: 'pending' as const,
+    event: {
+      content: '',
+      format: 'rich-text' as const,
+    },
+  };
+
+  switch (sourceNode.type) {
+    case 'note':
+      return {
+        ...baseData,
+        event: {
+          content: sourceNode.data.content || '',
+          format: 'rich-text',
+        },
+      };
+
+    case 'decision':
+      return {
+        ...baseData,
+        event: {
+          content: `判断条件: ${sourceNode.data.condition || ''}`,
+          format: 'rich-text',
+        },
+      };
+
+    default:
+      return baseData;
+  }
+}
+
+// 迁移到判断节点数据
+function migrateToDecisionData(sourceNode: WorkflowNode): DecisionNode['data'] {
+  const baseData = {
+    condition: '',
+    decisionType: 'binary' as const,
+    branches: [
+      {
+        id: `branch-${Date.now()}-1`,
+        label: '是',
+        color: '#52c41a',
+      },
+      {
+        id: `branch-${Date.now()}-2`,
+        label: '否',
+        color: '#f5222d',
+      },
+    ],
+  };
+
+  switch (sourceNode.type) {
+    case 'standard':
+      return {
+        ...baseData,
+        condition: sourceNode.data.event?.content || '',
+      };
+
+    default:
+      return baseData;
+  }
+}
+
+// 迁移到备注节点数据
+function migrateToNoteData(sourceNode: WorkflowNode): NoteNode['data'] {
+  const baseData = {
+    noteType: 'info' as const,
+    content: '',
+    isCollapsible: false,
+    defaultCollapsed: false,
+  };
+
+  switch (sourceNode.type) {
+    case 'standard':
+      return {
+        ...baseData,
+        content: sourceNode.data.event?.content || '',
+      };
+
+    case 'decision':
+      return {
+        ...baseData,
+        noteType: 'warning',
+        content: `原判断节点，条件: ${sourceNode.data.condition || ''}`,
+      };
+
+    default:
+      return baseData;
+  }
+}
+
+// 切换节点类型
+export function switchNodeType(
+  nodes: WorkflowNode[],
+  nodeId: string,
+  newType: NodeType
+): WorkflowNode[] {
+  const nodeIndex = nodes.findIndex((n) => n.id === nodeId);
+  if (nodeIndex === -1) return nodes;
+
+  const sourceNode = nodes[nodeIndex];
+  const migratedNode = migrateNodeData(sourceNode, newType);
+
+  const newNodes = [...nodes];
+  newNodes[nodeIndex] = {
+    ...sourceNode,
+    ...migratedNode,
+    id: sourceNode.id, // 保持ID不变
+  } as WorkflowNode;
+
+  return newNodes;
 }

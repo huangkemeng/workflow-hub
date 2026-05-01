@@ -14,9 +14,10 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Save, Eye, Loader2, GitBranch } from 'lucide-react';
 import { useState, useCallback, useEffect } from 'react';
-import { WorkflowNode } from '@/types/node';
+import { WorkflowNode, NodeType } from '@/types/node';
 import { Connection } from '@/types/connection';
 import { api } from '@/lib/api';
+import { switchNodeType } from '@/lib/node-utils';
 import { removeNodeConnections } from '@/lib/connection-utils';
 
 export default function EditWorkflowPage() {
@@ -120,6 +121,19 @@ export default function EditWorkflowPage() {
     },
     [completeConnection]
   );
+
+  // 处理节点重排序
+  const handleReorderNodes = useCallback((newNodes: WorkflowNode[]) => {
+    setNodes(newNodes);
+    setHasChanges(true);
+  }, [setNodes]);
+
+  // 处理节点类型切换
+  const handleSwitchNodeType = useCallback((nodeId: string, newType: NodeType) => {
+    const updatedNodes = switchNodeType(nodes, nodeId, newType);
+    setNodes(updatedNodes);
+    setHasChanges(true);
+  }, [nodes, setNodes]);
 
   if (isLoading) {
     return (
@@ -227,6 +241,7 @@ export default function EditWorkflowPage() {
               onCancelConnection={cancelConnection}
               onDeleteConnection={deleteConnection}
               onUpdateConnection={updateConnection}
+              onReorderNodes={handleReorderNodes}
             />
           </div>
 
@@ -240,6 +255,7 @@ export default function EditWorkflowPage() {
               onDelete={handleDeleteNode}
               onUpdateConnection={updateConnection}
               onDeleteConnection={deleteConnection}
+              onSwitchType={selectedNodeId ? (newType) => handleSwitchNodeType(selectedNodeId, newType) : undefined}
             />
           </div>
         </div>

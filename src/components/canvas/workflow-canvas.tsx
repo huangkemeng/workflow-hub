@@ -1,6 +1,21 @@
 'use client';
 
 import { useRef, useState, useCallback } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { WorkflowNode } from '@/types/node';
 import { Connection } from '@/types/connection';
 import { StandardNodeView } from '@/components/node-view/standard-node-view';
@@ -9,8 +24,9 @@ import { ParallelNodeView } from '@/components/node-view/parallel-node-view';
 import { LoopNodeView } from '@/components/node-view/loop-node-view';
 import { SubflowNodeView } from '@/components/node-view/subflow-node-view';
 import { NoteNodeView } from '@/components/node-view/note-node-view';
-import { ConnectionLine, ArrowMarker, TempConnectionLine, ConnectionTypeSelector } from './connection-line';
-import { getOutgoingConnections, getNodeConnections, validateConnection } from '@/lib/connection-utils';
+import { SortableNode } from './sortable-node';
+import { ConnectionLine, ArrowMarker, ConnectionTypeSelector } from './connection-line';
+import { getNodeConnections, validateConnection } from '@/lib/connection-utils';
 import { cn } from '@/lib/utils';
 import { GitBranch, Plus } from 'lucide-react';
 
@@ -28,6 +44,7 @@ interface WorkflowCanvasProps {
   onCancelConnection: () => void;
   onDeleteConnection: (connectionId: string) => void;
   onUpdateConnection: (connectionId: string, updates: Partial<Connection>) => void;
+  onReorderNodes: (nodes: WorkflowNode[]) => void;
 }
 
 export function WorkflowCanvas({
@@ -44,28 +61,46 @@ export function WorkflowCanvas({
   onCancelConnection,
   onDeleteConnection,
   onUpdateConnection,
+  onReorderNodes,
 }: WorkflowCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [typeSelectorPosition, setTypeSelectorPosition] = useState({ x: 0, y: 0 });
   const [pendingTarget, setPendingTarget] = useState<string | null>(null);
 
-  // 获取节点的位置（简化版，实际应该通过 ref 获取）
-  const getNodePosition = useCallback((nodeId: string) => {
-    const index = nodes.findIndex(n => n.id === nodeId);
-    if (index === -1) return null;
-    
-    // 简化的位置计算
-    return {
-      x: 400, // 中心位置
-      y: 100 + index * 200, // 每个节点间隔 200px
-    };
-  }, [nodes]);
+  // 配置拖拽传感器
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 需要移动 8px 才开始拖拽
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // 处理拖拽结束
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = nodes.findIndex((n) => n.id === active.id);
+      const newIndex = nodes.findIndex((n) => n.id === over.id);
+
+      const reorderedNodes = arrayMove(nodes, oldIndex, newIndex).map((node, index) => ({
+        ...node,
+        position: index + 1,
+      }));
+
+      onReorderNodes(reorderedNodes);
+    }
+  }, [nodes, onReorderNodes]);
 
   // 处理节点连接按钮点击
   const handleConnectClick = useCallback((nodeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (isCreatingConnection && tempConnection?.source === nodeId) {
       // 取消连接
       onCancelConnection();
@@ -77,7 +112,7 @@ export function WorkflowCanvas({
         connections,
         nodes
       );
-      
+
       if (validation.valid) {
         setPendingTarget(nodeId);
         setTypeSelectorPosition({ x: e.clientX, y: e.clientY });
@@ -98,8 +133,8 @@ export function WorkflowCanvas({
     }
   }, [pendingTarget, onCompleteConnection]);
 
-  // 渲染节点
-  const renderNode = (node: WorkflowNode, index: number) => {
+  // 渲染单个节点
+  const renderNodeContent = (node: WorkflowNode) => {
     const isSelected = node.id === selectedNodeId;
     const isConnectionSource = tempConnection?.source === node.id;
     const nodeConnections = getNodeConnections(node.id, connections);
@@ -114,7 +149,7 @@ export function WorkflowCanvas({
     };
 
     return (
-      <div key={node.id} className="relative" data-node-id={node.id}>
+      <div className="relative">
         {/* 节点 */}
         <div className="relative">
           {node.type === 'standard' && (
@@ -179,7 +214,7 @@ export function WorkflowCanvas({
     return connections.map((connection) => {
       const sourceIndex = nodes.findIndex(n => n.id === connection.source);
       const targetIndex = nodes.findIndex(n => n.id === connection.target);
-      
+
       if (sourceIndex === -1 || targetIndex === -1) return null;
 
       // 简化的位置计算
@@ -227,17 +262,37 @@ export function WorkflowCanvas({
         </g>
       </svg>
 
-      {/* 节点层 */}
-      <div className="max-w-2xl mx-auto space-y-16 relative" style={{ zIndex: 2 }}>
-        {nodes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground min-h-[400px]">
-            <p className="text-lg font-medium mb-2">画布为空</p>
-            <p className="text-sm">从左侧选择节点类型添加到画布</p>
+      {/* 节点层 - 带拖拽排序 */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={nodes.map(n => n.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="max-w-2xl mx-auto space-y-16 relative" style={{ zIndex: 2 }}>
+            {nodes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground min-h-[400px]">
+                <p className="text-lg font-medium mb-2">画布为空</p>
+                <p className="text-sm">从左侧选择节点类型添加到画布</p>
+              </div>
+            ) : (
+              nodes.map((node) => (
+                <SortableNode
+                  key={node.id}
+                  id={node.id}
+                  isSelected={node.id === selectedNodeId}
+                  isDisabled={isCreatingConnection}
+                >
+                  {renderNodeContent(node)}
+                </SortableNode>
+              ))
+            )}
           </div>
-        ) : (
-          nodes.map((node, index) => renderNode(node, index))
-        )}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {/* 连接类型选择器 */}
       {showTypeSelector && (
