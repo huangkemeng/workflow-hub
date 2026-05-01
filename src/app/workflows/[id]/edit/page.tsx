@@ -45,11 +45,11 @@ export default function EditWorkflowPage() {
   const {
     nodes,
     selectedNodeId,
+    selectedNode,
     addNode,
     updateNode,
     deleteNode,
     selectNode,
-    getSelectedNode,
     setNodes,
   } = useNodeEditor({
     initialNodes: workflow?.nodes || [],
@@ -251,7 +251,7 @@ export default function EditWorkflowPage() {
           {/* 右侧：属性编辑器 */}
           <div className="w-80 border-l bg-background overflow-y-auto">
             <NodePropertyEditor
-              node={getSelectedNode()}
+              node={selectedNode}
               connections={connections}
               selectedConnection={getSelectedConnection()}
               onChange={handleUpdateNode}
