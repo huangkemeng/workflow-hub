@@ -56,7 +56,11 @@ export async function GET(req: NextRequest) {
       order,
     })
 
-    return NextResponse.json(result)
+    // 转换为前端期望的格式
+    return NextResponse.json({
+      workflows: result.data,
+      total: result.pagination.total,
+    })
   } catch (error) {
     console.error('获取工作流列表失败:', error)
     return NextResponse.json(
