@@ -193,15 +193,31 @@ function renderLoopNode(node: LoopNode): string[] {
 function renderSubflowNode(node: SubflowNode): string[] {
   const lines: string[] = [];
   const { data } = node;
-  
-  lines.push(`**子流程类型**: ${data.subflowType === 'embedded' ? '嵌入式' : '外部引用'}`);
+
+  lines.push(`**子流程引用**: ${data.subflowTitle || data.subflowId || '未配置'}`);
   lines.push('');
-  
-  if (data.externalWorkflowId) {
-    lines.push(`**引用工作流ID**: ${data.externalWorkflowId}`);
+
+  if (data.version) {
+    lines.push(`**版本**: ${data.version}`);
     lines.push('');
   }
-  
+
+  if (data.inputMappings?.length) {
+    lines.push('**输入映射**: ');
+    data.inputMappings.forEach(m => {
+      lines.push(`- ${m.sourceField} → ${m.targetField}`);
+    });
+    lines.push('');
+  }
+
+  if (data.outputMappings?.length) {
+    lines.push('**输出映射**: ');
+    data.outputMappings.forEach(m => {
+      lines.push(`- ${m.sourceField} → ${m.targetField}`);
+    });
+    lines.push('');
+  }
+
   return lines;
 }
 

@@ -5,6 +5,7 @@ import { Connection } from '@/types/connection';
 import { StandardNodeForm } from './standard-node-form';
 import { DecisionNodeForm } from './decision-node-form';
 import { NoteNodeForm } from './note-node-form';
+import { SubflowNodeForm } from './subflow-node-form';
 import { ConnectionEditor } from './connection-editor';
 import { Button } from '@/components/ui/button';
 import { Trash2, GitBranch } from 'lucide-react';
@@ -86,6 +87,14 @@ export function NodePropertyEditor({
           <NoteNodeForm
             node={node}
             onChange={onChange as any}
+          />
+        );
+      case 'subflow':
+        return (
+          <SubflowNodeForm
+            currentWorkflowId="temp-workflow-id"
+            data={node.data}
+            onChange={(data) => onChange({ data })}
           />
         );
       default:

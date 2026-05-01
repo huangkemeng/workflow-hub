@@ -3,7 +3,7 @@
 import { SubflowNode } from '@/types/node';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Workflow, ExternalLink, FolderTree } from 'lucide-react';
+import { GitBranch, ExternalLink, FolderTree, ArrowRightLeft, ArrowLeftRight } from 'lucide-react';
 
 interface SubflowNodeViewProps {
   node: SubflowNode;
@@ -12,6 +12,10 @@ interface SubflowNodeViewProps {
 }
 
 export function SubflowNodeView({ node, isSelected, onClick }: SubflowNodeViewProps) {
+  const { data } = node;
+  const hasInputMappings = data.inputMappings && data.inputMappings.length > 0;
+  const hasOutputMappings = data.outputMappings && data.outputMappings.length > 0;
+
   return (
     <Card
       className={`cursor-pointer transition-all hover:shadow-md ${
@@ -21,41 +25,49 @@ export function SubflowNodeView({ node, isSelected, onClick }: SubflowNodeViewPr
     >
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <Workflow className="h-5 w-5 text-primary" />
+          <GitBranch className="h-5 w-5 text-primary" />
           <CardTitle className="text-base">{node.title}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
-        {/* 子流程类型 */}
-        <Badge variant={node.data.subflowType === 'external' ? 'default' : 'secondary'}>
-          {node.data.subflowType === 'external' ? (
-            <>
-              <ExternalLink className="h-3 w-3 mr-1" />
-              外部工作流
-            </>
-          ) : (
-            <>
-              <FolderTree className="h-3 w-3 mr-1" />
-              内嵌子流程
-            </>
-          )}
-        </Badge>
-
-        {/* 外部工作流引用 */}
-        {node.data.subflowType === 'external' && node.data.externalWorkflowId && (
+        {/* 子流程引用信息 */}
+        {data.subflowId ? (
           <div className="p-2 bg-muted rounded-md">
-            <p className="text-xs text-muted-foreground mb-1">引用工作流</p>
-            <p className="text-sm font-medium">{node.data.externalWorkflowId}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">引用工作流</p>
+            </div>
+            <p className="text-sm font-medium truncate">{data.subflowTitle || data.subflowId}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="text-xs">
+                {data.version || 'latest'}
+              </Badge>
+            </div>
+          </div>
+        ) : (
+          <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-xs text-yellow-700">未选择子流程</p>
           </div>
         )}
 
-        {/* 内嵌节点数量 */}
-        {node.data.subflowType === 'embedded' && node.data.embeddedNodes && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <FolderTree className="h-4 w-4" />
-            <span>{node.data.embeddedNodes.length} 个内嵌节点</span>
-          </div>
-        )}
+        {/* 映射配置摘要 */}
+        <div className="flex items-center gap-2">
+          {hasInputMappings && (
+            <Badge variant="secondary" className="text-xs">
+              <ArrowRightLeft className="h-3 w-3 mr-1" />
+              输入: {data.inputMappings!.length}
+            </Badge>
+          )}
+          {hasOutputMappings && (
+            <Badge variant="secondary" className="text-xs">
+              <ArrowLeftRight className="h-3 w-3 mr-1" />
+              输出: {data.outputMappings!.length}
+            </Badge>
+          )}
+          {!hasInputMappings && !hasOutputMappings && (
+            <span className="text-xs text-muted-foreground">无参数映射</span>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

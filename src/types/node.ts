@@ -101,16 +101,25 @@ export interface LoopNode extends BaseNode {
   };
 }
 
+// 参数映射
+export interface ParameterMapping {
+  sourceField: string;
+  targetField: string;
+}
+
+// 子流程节点数据
+export interface SubflowNodeData {
+  subflowId?: string;
+  subflowTitle?: string;
+  version?: string;
+  inputMappings?: ParameterMapping[];
+  outputMappings?: ParameterMapping[];
+}
+
 // 子流程节点
 export interface SubflowNode extends BaseNode {
   type: 'subflow';
-  data: {
-    subflowType: 'embedded' | 'external';
-    externalWorkflowId?: string;
-    embeddedNodes?: WorkflowNode[];
-    inputMapping?: Record<string, string>;
-    outputMapping?: Record<string, string>;
-  };
+  data: SubflowNodeData;
 }
 
 // 备注节点
