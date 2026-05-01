@@ -24,7 +24,7 @@ export function useNodeEditor({ initialNodes = [], onChange }: UseNodeEditorProp
 
   const updateNode = useCallback((nodeId: string, updates: Partial<WorkflowNode>) => {
     const updatedNodes = nodes.map((node) =>
-      node.id === nodeId ? { ...node, ...updates } : node
+      node.id === nodeId ? { ...node, ...updates } as WorkflowNode : node
     );
     setNodes(updatedNodes);
     onChange?.(updatedNodes);
